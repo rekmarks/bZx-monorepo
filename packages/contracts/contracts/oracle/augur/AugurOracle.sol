@@ -181,6 +181,13 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     onlyBZx
     updatesEMA(tx.gasprice)
     returns (bool) {
+        address market = IShareToken(loanPosition.positionTokenAddressFilled).getMarket();
+        bytes32 orderHash = loanOrder.loanOrderHash;
+
+        if (!allowedMarkets[orderHash][market]) {
+            return false;
+        }
+
         require (
             getCurrentMarginAmount(
                 loanOrder.loanTokenAddress,
