@@ -12,7 +12,7 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 // Since it inherits Ownable it provides typical ownership functionality with a slight modification to the transferOwnership function
 // Setting owner and bZxContractAddress to the same address is not supported.
 contract BZxOwnable is Ownable {
-
+    address public backendAddress;
     address public bZxContractAddress;
 
     event BZxOwnershipTransferred(address indexed previousBZxContract, address indexed newBZxContract);
