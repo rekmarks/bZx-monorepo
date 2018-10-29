@@ -74,14 +74,14 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
     function getExpectedRate(
         address _src, 
         address _dest, 
-        uint _shareAmount,
+        uint _srcMaxAmount,
         uint _loopLimit)         
     public
     view
     returns (uint expectedRate, uint slippageRate) {  
         IOrders ordersService = getOrdersService();
 
-        IShareToken shares = isShareToken(_src) ? IShareToken(_src) : IShareToken(_dest);
+        IShareToken shares = isWETHToken(_src) ? IShareToken(_dest) : IShareToken(_src);
             
         Order.Types orderType = calcOrderType(_src, _dest); 
         bytes32 bestOrderID = ordersService.getBestOrderId(orderType, shares.getMarket(), shares.getOutcome());
@@ -89,20 +89,22 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
             return (0,0);
         }
 
-        uint totalAmount;
+        uint srcAmount;
+        uint shareAmount;
         uint volume;
         uint loop;
         do {                  
             slippageRate = ordersService.getPrice(bestOrderID);
             uint amount = ordersService.getAmount(bestOrderID);    
             
-            totalAmount += amount;
+            srcAmount += isWETHToken(_src) ? amount.mul(slippageRate) : amount;
+            shareAmount += amount;
             volume += slippageRate.mul(amount);
 
             bestOrderID = ordersService.getWorseOrderId(bestOrderID);            
-        } while(totalAmount < _shareAmount && bestOrderID != bytes32(0x0) && (++loop) < _loopLimit);
+        } while(srcAmount < _srcMaxAmount && bestOrderID != bytes32(0x0) && (++loop) < _loopLimit);
         
-        return (volume.div(totalAmount), slippageRate);
+        return (volume.div(shareAmount), slippageRate);
     }
 
     // /// BUY:  TYPE = 0, WETH -> SHARE
@@ -206,7 +208,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
 
         emit AugurOracleTrade(Order.TradeDirections.Long, _share, _amountWETH, _amountShare.sub(remainingShare), _price);
 
-        return (OK, remainingShare);
+        return (OK, _amountShare.sub(remainingShare));
     }
 
     function sellShares(
