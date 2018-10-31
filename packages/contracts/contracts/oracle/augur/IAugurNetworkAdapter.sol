@@ -136,6 +136,14 @@ contract IAugurNetworkAdapter {
     public 
     view 
     returns (uint expectedRate, uint slippageRate);
+
+    function estimateRate(
+        address _src, 
+        address _dest, 
+        uint _destMaxAmount)         
+    public
+    view
+    returns (uint expectedRate, uint slippageRate, uint loopLimit);
  
     function isShareToken(address token) 
     public 

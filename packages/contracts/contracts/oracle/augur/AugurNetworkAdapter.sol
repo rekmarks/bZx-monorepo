@@ -74,7 +74,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
     function getExpectedRate(
         address _src, 
         address _dest, 
-        uint _srcMaxAmount,
+        uint _srcAmount,
         uint _loopLimit)         
     public
     view
@@ -102,9 +102,45 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
             volume += slippageRate.mul(amount);
 
             bestOrderID = ordersService.getWorseOrderId(bestOrderID);            
-        } while(srcAmount < _srcMaxAmount && bestOrderID != bytes32(0x0) && (++loop) < _loopLimit);
+        } while(srcAmount < _srcAmount && bestOrderID != bytes32(0x0) && (++loop) < _loopLimit);
         
         return (volume.div(shareAmount), slippageRate);
+    }
+
+    function estimateRate(
+        address _src, 
+        address _dest, 
+        uint _destMaxAmount)         
+    public
+    view
+    returns (uint expectedRate, uint slippageRate, uint loopLimit) {  
+        IOrders ordersService = getOrdersService();
+
+        IShareToken shares = isWETHToken(_src) ? IShareToken(_dest) : IShareToken(_src);
+            
+        Order.Types orderType = calcOrderType(_src, _dest); 
+        bytes32 bestOrderID = ordersService.getBestOrderId(orderType, shares.getMarket(), shares.getOutcome());
+        if (bestOrderID == bytes32(0x0)) {
+            return (0,0,0);
+        }
+
+        uint destAmount;
+        uint shareAmount;
+        uint volume;
+        uint loop;
+        do {                  
+            slippageRate = ordersService.getPrice(bestOrderID);
+            uint amount = ordersService.getAmount(bestOrderID);    
+            
+            destAmount += isWETHToken(_dest) ? amount.div(slippageRate) : amount;
+            shareAmount += amount;
+            volume += slippageRate.mul(amount);
+
+            bestOrderID = ordersService.getWorseOrderId(bestOrderID);     
+            ++loop;       
+        } while(destAmount < _destMaxAmount && bestOrderID != bytes32(0x0));
+        
+        return (volume.div(shareAmount), slippageRate, loop);
     }
 
     // /// BUY:  TYPE = 0, WETH -> SHARE
