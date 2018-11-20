@@ -542,9 +542,14 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     returns (bool, uint) {
         (, uint slippage) = getExpectedRate(loanToken, positionToken, loanAmount);
 
-        uint estimatedPositionAmount = isWETHToken(positionToken) 
-            ? loanAmount.div(slippage)
-            : loanAmount.mul(slippage);
+        uint estimatedPositionAmount;
+        if (loanToken == positionToken) {
+            estimatedPositionAmount = loanAmount;
+        } else {
+            estimatedPositionAmount = isWETHToken(positionToken)
+                ? loanAmount.div(slippage)
+                : loanAmount.mul(slippage);
+        }
 
         if (positionAmount > estimatedPositionAmount) {
             return (true, positionAmount - estimatedPositionAmount);
@@ -589,7 +594,12 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
             estimatedPositionValue= positionTokenAmount.mul(positionToLoanRate).div(10**18);
         }
 
-        return estimatedLoanValue.add(estimatedPositionValue).sub(loanTokenAmount).mul(10**20).div(loanTokenAmount);
+        uint totalCollateral = estimatedLoanValue.add(estimatedPositionValue);
+        if (totalCollateral > loanTokenAmount) {
+            return totalCollateral.sub(loanTokenAmount).mul(10**20).div(loanTokenAmount);
+        } else {
+            return 0;
+        }
     }
 
     /*
