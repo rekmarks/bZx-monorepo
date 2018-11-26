@@ -39,7 +39,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         augurController = IController(_augurController);
         weth = IWETH(_weth);        
 
-        require(ERC20(_cash).approve(augurController.getAugur(), ETERNAL_APPROVAL_VALUE), "Failed to set unlimited allowance");
+        require(ERC20(_cash).approve(augurController.getAugur(), MAX_UINT), "Failed to set unlimited allowance");
     }
 
     /// @dev Fallback function. The contract should be able to receive ETH from `Augur`    
@@ -63,84 +63,100 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
     ensureTokenBalanceUnchanged(ERC20(_dest))
     returns (uint, uint) {        
         if(isWETHToken(_src) && isShareToken(_dest)) {
-            return buyShares(_srcAmount, IShareToken(_dest), _maxDestAmount, _price, _receiver, _loopLimit);
+            return buyShares(_srcAmount, IShareToken(_dest), _maxDestAmount, RATE_MULTIPLIER.div(_price), _receiver, msg.sender, _loopLimit);
         } else if (isShareToken(_src) && isWETHToken(_dest)) {
-            return sellShares(IShareToken(_src), _srcAmount, _maxDestAmount, _price, _receiver, _loopLimit);
+            return sellShares(IShareToken(_src), _srcAmount, _price.div(RATE_MULTIPLIER), _receiver, msg.sender, _loopLimit);
+        } else if (isShareToken(_src) && isShareToken(_dest)) {
+            return swapShares(IShareToken(_src), _srcAmount, IShareToken(_dest), _maxDestAmount, _price, _receiver, _loopLimit);
         }
         
         return (ERR_BZX_AUGUR_UNSUPPORTED_TOKEN, 0);                      
     }
     
-    function getExpectedRate(
-        address _src, 
-        address _dest, 
-        uint _srcAmount,
+    function getBuyRate(
+        address _share,  
+        uint _shareAmount,
         uint _loopLimit)         
     public
     view
     returns (uint expectedRate, uint slippageRate) {  
-        IOrders ordersService = getOrdersService();
+        require(isShareToken(_share), "AugurAdapter::getBuyRate: Invalid Share token");
 
-        IShareToken shares = isWETHToken(_src) ? IShareToken(_dest) : IShareToken(_src);
-            
-        Order.Types orderType = calcOrderType(_src, _dest); 
-        bytes32 bestOrderID = ordersService.getBestOrderId(orderType, shares.getMarket(), shares.getOutcome());
-        if (bestOrderID == bytes32(0x0)) {
-            return (0,0);
-        }
-
-        uint srcAmount;
-        uint shareAmount;
-        uint volume;
-        uint loop;
-        do {                  
-            slippageRate = ordersService.getPrice(bestOrderID);
-            uint amount = ordersService.getAmount(bestOrderID);    
-            
-            srcAmount += isWETHToken(_src) ? amount.mul(slippageRate) : amount;
-            shareAmount += amount;
-            volume += slippageRate.mul(amount);
-
-            bestOrderID = ordersService.getWorseOrderId(bestOrderID);            
-        } while(srcAmount < _srcAmount && bestOrderID != bytes32(0x0) && (++loop) < _loopLimit);
-        
-        return (volume.div(shareAmount), slippageRate);
+        return calculateRate(address(weth), MAX_UINT, _share, _shareAmount, _loopLimit);
     }
 
-    function estimateRate(
-        address _src, 
-        address _dest, 
-        uint _destMaxAmount)         
+    function getSellRate(
+        address _share,  
+        uint _shareAmount,
+        uint _loopLimit)         
     public
     view
-    returns (uint expectedRate, uint slippageRate, uint loopLimit) {  
+    returns (uint expectedRate, uint slippageRate) {  
+        require(isShareToken(_share), "AugurAdapter::getSellRate: Invalid Share token");
+
+        return calculateRate(_share, _shareAmount, address(weth), MAX_UINT, _loopLimit);
+    }
+
+    function getSwapRate(
+        address _shareSrc,  
+        uint _shareSrcAmount,
+        address _shareDest,  
+        uint _loopLimit)         
+    public
+    view
+    returns (uint expectedRate, uint slippageRate) { 
+        if (isWETHToken(_shareSrc) || isWETHToken(_shareDest)) {
+            return calculateRate(_shareSrc, _shareSrcAmount, _shareDest, MAX_UINT, _loopLimit);
+        } 
+
+        (uint sellRate, uint slippageSellRate) = 
+            calculateRate(_shareSrc, _shareSrcAmount, address(weth), MAX_UINT, _loopLimit);
+        (uint buyRate, uint slippageBuyRate) = 
+            calculateRate(address(weth), _shareSrcAmount.mul(sellRate).div(RATE_MULTIPLIER), _shareDest, MAX_UINT, _loopLimit);
+
+        return (sellRate.mul(buyRate).div(RATE_MULTIPLIER), slippageSellRate.mul(slippageBuyRate).div(RATE_MULTIPLIER));
+    }
+
+    function getVolume(
+        address _shareToken, 
+        Order.Types _orderType,
+        uint _loopLimit)         
+    public
+    view
+    returns (uint) {  
         IOrders ordersService = getOrdersService();
 
-        IShareToken shares = isWETHToken(_src) ? IShareToken(_dest) : IShareToken(_src);
+        IShareToken shares = IShareToken(_shareToken);
             
-        Order.Types orderType = calcOrderType(_src, _dest); 
-        bytes32 bestOrderID = ordersService.getBestOrderId(orderType, shares.getMarket(), shares.getOutcome());
+        bytes32 bestOrderID = ordersService.getBestOrderId(_orderType, shares.getMarket(), shares.getOutcome());
         if (bestOrderID == bytes32(0x0)) {
-            return (0,0,0);
+            return 0;
+        }
+        
+        uint shareAmount;
+        uint loop;
+        do {                              
+            shareAmount += ordersService.getAmount(bestOrderID);                
+            bestOrderID = ordersService.getWorseOrderId(bestOrderID);            
+        } while(bestOrderID != bytes32(0x0) && (++loop) < _loopLimit);
+        
+        return shareAmount;
+    }
+
+    function getShareTokens(
+        address _market)         
+    public
+    view
+    returns (address[]) {
+        uint numberOfOutcomes = IMarket(_market).getNumberOfOutcomes();
+
+        address[] memory shares = new address[](numberOfOutcomes);
+        for (uint i = 0; i < numberOfOutcomes; i++) {
+            address token = IMarket(_market).getShareToken(i);
+            shares[i] = token;
         }
 
-        uint destAmount;
-        uint shareAmount;
-        uint volume;
-        uint loop;
-        do {                  
-            slippageRate = ordersService.getPrice(bestOrderID);
-            uint amount = ordersService.getAmount(bestOrderID);    
-            
-            destAmount += isWETHToken(_dest) ? amount.div(slippageRate) : amount;
-            shareAmount += amount;
-            volume += slippageRate.mul(amount);
-
-            bestOrderID = ordersService.getWorseOrderId(bestOrderID);     
-            ++loop;       
-        } while(destAmount < _destMaxAmount && bestOrderID != bytes32(0x0));
-        
-        return (volume.div(shareAmount), slippageRate, loop);
+        return shares;
     }
 
     // /// BUY:  TYPE = 0, WETH -> SHARE
@@ -183,20 +199,18 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         if (_token == address(0x0)) {
             return false;
         }
-
-        // TODO: ahiatsevich: find no so dirty way to perform this check
-        _token.call.gas(4999)(abi.encodeWithSignature("getTypeName()")); 
+        
+        bytes4 sig = 0xdb0a087c; //bytes4(keccak256("getTypeName()"));
+        bytes32 tokenType;
         assembly {
-            switch returndatasize
-            case 32 {
-                result := not(0)
-            }
-            default {
-                result := 0
-            }
+            let data := mload(0x40)
+            mstore(data, sig) 
+
+            let result := staticcall(4999, _token, data, 0x08, data, 0x20)
+            tokenType := mload(data) 
         }
 
-        result = result && IShareToken(_token).getTypeName() == bytes32("ShareToken");
+        return tokenType == bytes32("ShareToken");
     }
 
     function getTradeService()
@@ -213,78 +227,181 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         return IOrders(augurController.lookup("Orders"));
     }
 
+    // @dev Buy shares
+    // @return The result code and the amount of share token bought
     function buyShares(
-        uint _amountWETH, 
+        uint _amountWETH,
         IShareToken _share, 
-        uint _amountShare, 
+        uint _amountShare,
         uint _price, 
         address _receiver,
+        address _maker,
         uint _loopLimit) 
     internal
     returns (uint, uint) {
-        // process WETH received
-        if (weth.allowance(msg.sender, address(this)) < _amountWETH) {
-            return (ERR_BZX_AUGUR_INSUFFICIENT_WETH_ALLOWANCE, 0);
+        if (_maker != address(this)) {
+            // process WETH received
+            if (weth.allowance(_maker, address(this)) < _amountWETH) {
+                return (ERR_BZX_AUGUR_INSUFFICIENT_WETH_ALLOWANCE, 0);
+            }
+            require(weth.transferFrom(_maker, address(this), _amountWETH), "AugurAdapter::buyShares: Unable process WETH");            
         }
-        require(weth.transferFrom(msg.sender, address(this), _amountWETH), "AugurAdapter::buyShares: Unable process WETH");
+        
         weth.withdraw(_amountWETH);
 
         // do trade
-        uint256 remainingShare = getTradeService().publicFillBestOrderWithLimit.value(_amountWETH)(
-                                                    Order.TradeDirections.Long, 
-                                                    _share.getMarket(), 
-                                                    _share.getOutcome(), 
-                                                    _amountShare, 
-                                                    _price, 
-                                                    "augur_adapter_trade_group_id", 
-                                                    _loopLimit);        
+        uint remainings = getTradeService().publicFillBestOrderWithLimit.value(_amountWETH)(
+            Order.TradeDirections.Long, 
+            _share.getMarket(), 
+            _share.getOutcome(), 
+            _amountShare, 
+            _price, 
+            "augur_adapter_buy_trade_group_id", 
+            _loopLimit);        
 
-        // transfer bought shares to sender
-        require(_share.transfer(_receiver, _amountShare.sub(remainingShare)), "AugurAdapter::buyShares: Unable transfer shares");
+        if (_receiver != address(this)) {
+            // transfer shares to sender
+            require(_share.transfer(_receiver, _amountShare.sub(remainings)), "AugurAdapter::buyShares: Unable transfer shares");
+        }
+        
+        emit AugurOracleTrade(Order.TradeDirections.Long, _share, _amountWETH, _amountShare.sub(remainings), _price);
 
-        emit AugurOracleTrade(Order.TradeDirections.Long, _share, _amountWETH, _amountShare.sub(remainingShare), _price);
-
-        return (OK, _amountShare.sub(remainingShare));
+        return (OK, _amountShare.sub(remainings));
     }
 
+    // @dev Sell shares
+    // @return The result code and the amount of weth received
     function sellShares(
         IShareToken _share, 
         uint _amountShare, 
-        uint _amountWETH, 
         uint _price, 
         address _receiver,
+        address _maker,
         uint _loopLimit) 
     internal
-    returns (uint errorCode, uint remainingShare) {  
+    returns (uint, uint) {  
         // process ShareToken received
-        if (_share.allowance(msg.sender, address(this)) < _amountShare) {
-            return (ERR_BZX_AUGUR_INSUFFICIENT_STOKEN_ALLOWANCE, 0);
+        if (_maker != address(this)) {
+            if (_share.allowance(_maker, address(this)) < _amountShare) {
+                return (ERR_BZX_AUGUR_INSUFFICIENT_STOKEN_ALLOWANCE, 0);
+            }
+
+            require(_share.transferFrom(_maker, address(this), _amountShare), "AugurAdapter::sellShares: Unable process shares");
         }
-
-        require(_share.transferFrom(msg.sender, address(this), _amountShare), "AugurAdapter::sellShares: Unable process shares");
-
+        
         uint initialBalance = address(this).balance;
 
         // do trade
-        remainingShare = getTradeService().publicFillBestOrderWithLimit(
-                                    Order.TradeDirections.Short, 
-                                    _share.getMarket(), 
-                                    _share.getOutcome(), 
-                                    _amountShare, 
-                                    _price, 
-                                    "augur_adapter_trade_group_id", 
-                                    _loopLimit);        
+        uint remainings = getTradeService().publicFillBestOrderWithLimit(
+            Order.TradeDirections.Short, 
+            _share.getMarket(), 
+            _share.getOutcome(), 
+            _amountShare, 
+            _price, 
+            "augur_adapter_trade_group_id", 
+            _loopLimit);        
 
-        // transfer remaining shares to sender
-        require(_share.transfer(_receiver, remainingShare), "AugurAdapter::sellShares: Unable transfer remaining shares");
-
-        // transfer remaining shares to sender
         uint receivedValue = address(this).balance.sub(initialBalance);
         weth.deposit.value(receivedValue)();
-        require(weth.transfer(_receiver, receivedValue), "AugurAdapter::sellShares: Unable transfer received WETH to sender");
-        
-        emit AugurOracleTrade(Order.TradeDirections.Short, _share, _amountWETH, _amountShare.sub(remainingShare), _price);
 
-        return (OK, remainingShare);
+        if (_receiver != address(this)) {
+            // transfer remaining shares to sender
+            if (remainings > 0) {
+                require(_share.transfer(_receiver, remainings), "AugurAdapter::sellShares: Unable transfer remaining shares");
+            }
+                
+            // transfer remaining WETH to sender        
+            require(weth.transfer(_receiver, receivedValue), "AugurAdapter::sellShares: Unable transfer received WETH to sender");        
+        }
+        
+        emit AugurOracleTrade(Order.TradeDirections.Short, _share, receivedValue, _amountShare.sub(remainings), _price);
+
+        return (OK, receivedValue);
+    }
+
+    // @dev Exchange shares tokens
+    // @return The result code and the amount of dest tokens bought
+    function swapShares(
+        IShareToken _src, 
+        uint _srcAmount, 
+        IShareToken _dest, 
+        uint _maxDestAmount, 
+        uint _price, 
+        address _receiver, 
+        uint _loopLimit) 
+    internal
+    returns (uint result, uint bought) {         
+        // 1st step: sell src shares token
+        (uint expectedRateSrc,) = calculateRate(_src, _srcAmount, address(weth), MAX_UINT, _loopLimit);
+
+        (result, bought) = sellShares(
+            _src, 
+            _srcAmount, 
+            expectedRateSrc.div(RATE_MULTIPLIER), 
+            address(this), 
+            msg.sender,
+            _loopLimit);
+
+        require(result == OK, "AugurAdapter::swapShares: Can't sell shares");
+
+        // 2nd step: buy dest shares token
+        (uint expectedRateDest,) = calculateRate(address(weth), bought, _dest, MAX_UINT, _loopLimit);
+
+        (result, bought) = buyShares(
+            bought, 
+            _dest, 
+            _maxDestAmount, 
+            RATE_MULTIPLIER.div(expectedRateDest), 
+            _receiver, 
+            address(this), 
+            _loopLimit);
+
+        require(result == OK, "AugurAdapter::swapShares: Can't buy shares");
+
+        // 3rd step: verify the rate, make sure that the price was valid
+        //require(_price > resultCodeDest.mul(10**18)div(expectedRateSrc), "AugurAdapter::swapShares: Trade is underpriced");
+    }    
+
+    // expectedRate = (_dest / _src) * (10**18)
+    function calculateRate(
+        address _src, 
+        uint _srcAmount,
+        address _dest, 
+        uint _destMaxAmount,
+        uint _loopLimit)         
+    public // TODO
+    view
+    returns (uint expectedRate, uint slippageRate) {  
+        IOrders ordersService = getOrdersService();
+
+        IShareToken shares = isWETHToken(_src) ? IShareToken(_dest) : IShareToken(_src);
+            
+        Order.Types orderType = calcOrderType(_src, _dest); 
+        bytes32 bestOrderID = ordersService.getBestOrderId(orderType, shares.getMarket(), shares.getOutcome());
+        if (bestOrderID == bytes32(0x0)) {
+            return (0,0);
+        }
+
+        uint srcAmount;
+        uint destAmount;
+        uint temp;
+        do {                  
+            slippageRate = ordersService.getPrice(bestOrderID);
+            uint amount = ordersService.getAmount(bestOrderID);    
+            
+            srcAmount += isWETHToken(_src) ? amount.mul(slippageRate) : amount;
+            destAmount += isWETHToken(_dest) ? amount.mul(slippageRate) : amount;
+            expectedRate += slippageRate.mul(amount);
+
+            bestOrderID = ordersService.getWorseOrderId(bestOrderID);            
+        } while(srcAmount < _srcAmount && destAmount < _destMaxAmount && bestOrderID != bytes32(0x0) && (++temp) < _loopLimit);
+        
+        temp = isWETHToken(_src) ? destAmount : srcAmount;
+
+        if (isShareToken(_src)) {
+            return (RATE_MULTIPLIER.mul(expectedRate).div(temp), RATE_MULTIPLIER.mul(slippageRate));
+        } else {
+            return (RATE_MULTIPLIER.div(expectedRate.div(temp)), RATE_MULTIPLIER.div(slippageRate));
+        }        
     }
 }

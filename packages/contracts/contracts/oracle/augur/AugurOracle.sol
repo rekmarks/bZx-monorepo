@@ -23,9 +23,8 @@ import "../../BZx.sol";
 
 contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector, GasRefunder {
     using SafeMath for uint256;    
-
     // version
-    string public constant version = "0.0.2";
+    string public constant version = "0.0.3";
 
     // Bounty hunters are remembursed from collateral
     // The oracle requires a minimum amount
@@ -57,6 +56,8 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
 
     // Augur Network adapter address
     IAugurNetworkAdapter public augurNetwork;
+
+    uint public constant RATE_MULTIPLIER = 10**18;
 
     // allowed markets mapping ([order hash] -> [[maker address] -> [allowed or not]])
     mapping (bytes32 => mapping (address => bool)) public allowedMarkets;  
@@ -172,14 +173,17 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         address positionToken = loanPosition.positionTokenAddressFilled;
         address loadToken = loanOrder.loanTokenAddress;
 
-        address shareToken = isWETHToken(positionToken) ? loadToken : positionToken;
-
-        address market = IShareToken(shareToken).getMarket();
-        bytes32 orderHash = loanOrder.loanOrderHash;
-
-        if (!allowedMarkets[orderHash][market]) {
-            return false;
+        if (augurNetwork.isShareToken(positionToken)) {
+            if (!isMarketAllowed(loanOrder.loanOrderHash, IShareToken(positionToken).getMarket())) {
+                return false;
+            }
         }
+
+        if (augurNetwork.isShareToken(loadToken)) {        
+            if (!isMarketAllowed(loanOrder.loanOrderHash, IShareToken(loadToken).getMarket())) {
+                return false;
+            }
+        }        
 
         // make sure that an order is still valid
         if (_shouldLiquidate(loanOrder, loanPosition)) {
@@ -373,33 +377,25 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     }
 
     function doTrade(
-        address src, 
-        address dest, 
-        uint srcAmount,
+        address _src, 
+        address _dest, 
+        uint _srcAmount,
         uint)
     public
     onlyBZx
-    returns (uint, uint) {
+    returns (uint destToken, uint srcAmount) {
         // make sure that the oracle have received enough src token to do a trade
-        require(EIP20(src).balanceOf(address(this)) >= srcAmount, "AugurOracle::_doTrade: Src token balance is not enough");
+        require(EIP20(_src).balanceOf(address(this)) >= _srcAmount, "AugurOracle::_doTrade: Src token balance is not enough");
 
         // weth and augur share token are not protected against double spend attack 
         // no need to set allowance to 0
-        require(EIP20(src).approve(augurNetwork, srcAmount), "AugurOracle::_doTrade: Unable to set allowance");
+        require(EIP20(_src).approve(augurNetwork, _srcAmount), "AugurOracle::_doTrade: Unable to set allowance");
 
-        (uint rate, uint worstRate) = augurNetwork.getExpectedRate(src, dest, srcAmount, augurLoopLimit);
-
-        uint result;
-        uint destToken;
-
-        // a rate always shows how much weth should be spent to buy 1 share token, i.e rate = weth/share_token
-        if (src == weth) {
-            (result, destToken) = augurNetwork.trade(src, srcAmount, dest, srcAmount.div(rate), worstRate, vault, augurLoopLimit);
-        } else {
-            assert(dest == weth);
-            (result, destToken) = augurNetwork.trade(src, srcAmount, dest, srcAmount.mul(rate), worstRate, vault, augurLoopLimit);
-        }
+        (uint rate, uint worstRate) = augurNetwork.getSwapRate(_src, _srcAmount, _dest, augurLoopLimit);
         
+        uint result;
+        (result, destToken) = augurNetwork.trade(_src, _srcAmount, _dest, _srcAmount.mul(rate).div(RATE_MULTIPLIER), worstRate, vault, augurLoopLimit);
+                
         require(result == augurNetwork.OK(), "AugurOracle::_doTrade: trade failed");
 
         return (destToken, srcAmount);
@@ -459,12 +455,13 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
 
                 return (loanTokenAmountNeeded, loanTokenAmountNeeded);
             } else {                
-                (uint rate, uint slippage, uint loop) = augurNetwork.estimateRate(
+                (uint rate, uint slippage) = augurNetwork.getSwapRate(
                     loanPosition.collateralTokenAddressFilled, 
+                    loanTokenAmountNeeded,
                     loanOrder.loanTokenAddress,
-                    loanTokenAmountNeeded);
+                    augurLoopLimit);
                 
-                collateralTokenAmountUsed = loanTokenAmountNeeded.mul(rate);
+                collateralTokenAmountUsed = loanTokenAmountNeeded.mul(rate).div(RATE_MULTIPLIER);
                 
                 require(EIP20(loanPosition.collateralTokenAddressFilled).approve(augurNetwork, collateralTokenAmountUsed), 
                     "AugurOracle::_doTrade: Unable to set allowance");
@@ -476,7 +473,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
                     loanTokenAmountNeeded, 
                     slippage, 
                     vault, 
-                    loop);
+                    augurLoopLimit);
 
                 require(EIP20(loanPosition.collateralTokenAddressFilled).transfer(vault, loanPosition.collateralTokenAmountFilled - collateralTokenAmountUsed), 
                     "AugurOracle::processCollateral: Unable to sent collateral back");
@@ -518,7 +515,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     public
     view
     returns (bool) {      
-        (uint rate, uint worstRate) = augurNetwork.getExpectedRate(src, dest, srcAmount, augurLoopLimit);  
+        (uint rate, uint worstRate) = augurNetwork.getSwapRate(src, srcAmount, dest, augurLoopLimit);  
         return rate > 0 || worstRate > 0;
     }
 
@@ -527,7 +524,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     view
     returns (uint rate, uint destAmount) {
         (rate,) = getExpectedRate(src, dest, srcAmount);        
-        destAmount = srcAmount.mul(rate).div(10**18);
+        destAmount = srcAmount.mul(rate).div(RATE_MULTIPLIER);
     }
 
     // returns bool isProfit, uint profitOrLoss
@@ -547,8 +544,8 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
             estimatedPositionAmount = loanAmount;
         } else {
             estimatedPositionAmount = isWETHToken(positionToken)
-                ? loanAmount.div(slippage)
-                : loanAmount.mul(slippage);
+                ? loanAmount.mul(RATE_MULTIPLIER).div(slippage)
+                : loanAmount.mul(slippage).div(RATE_MULTIPLIER);
         }
 
         if (positionAmount > estimatedPositionAmount) {
@@ -580,7 +577,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
                 return 0; // Unsupported trade
             }
 
-            estimatedLoanValue = collateralTokenAmount.mul(collateralToLoanRate).div(10**18);
+            estimatedLoanValue = collateralTokenAmount.mul(collateralToLoanRate).div(RATE_MULTIPLIER);
         }
 
         uint estimatedPositionValue;
@@ -591,7 +588,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
             if (positionToLoanRate == 0) {
                 return 0; // Unsupported trade
             }
-            estimatedPositionValue= positionTokenAmount.mul(positionToLoanRate).div(10**18);
+            estimatedPositionValue= positionTokenAmount.mul(positionToLoanRate).div(RATE_MULTIPLIER);
         }
 
         uint totalCollateral = estimatedLoanValue.add(estimatedPositionValue);
@@ -678,6 +675,23 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     * Aux functions
     */
 
+    function getShareVolume(
+        address _shareToken, 
+        Order.Types _orderType,
+        uint _loopLimit)
+    public
+    view
+    returns (uint) {
+        return augurNetwork.getVolume(_shareToken, _orderType, _loopLimit);
+    }
+
+    function getShareTokens(address _market)
+    public
+    view
+    returns (address[]) {
+        return augurNetwork.getShareTokens(_market);
+    }
+
     function isMarketAllowed(bytes32 _orderhash, address _market) 
     public
     view
@@ -710,23 +724,15 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     public
     view
     returns (uint expectedRate, uint slippageRate) {
-        uint RATE_COEFF = 10**18;
-
         if (src != weth && dest != weth) {
             return (0, 0);
         }
         
         if (src == dest) {
-            return (1 * RATE_COEFF, 1 * RATE_COEFF);
+            return ((10**18), (10**18));
         }
         
-        (uint rate, uint slippage) = augurNetwork.getExpectedRate(src, dest, srcAmount, augurLoopLimit);  
-
-        if (src == weth) {
-            return (RATE_COEFF.div(rate), RATE_COEFF.div(slippage));            
-        } else if (dest == weth) {
-            return (rate.mul(RATE_COEFF), slippage.mul(RATE_COEFF));
-        }
+        return augurNetwork.getSwapRate(src, srcAmount, dest, augurLoopLimit);  
     }
 
     function isWETHToken(address _token)

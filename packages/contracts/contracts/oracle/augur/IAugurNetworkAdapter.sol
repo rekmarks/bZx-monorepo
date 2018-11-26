@@ -99,8 +99,9 @@ contract IOrders {
     function isWorsePrice(Order.Types _type, uint256 _price, bytes32 _orderId) public view returns (bool);
 }
 
-contract IAugurNetworkAdapter {
-    uint256 public constant ETERNAL_APPROVAL_VALUE = 2 ** 256 - 1;    
+contract IAugurNetworkAdapter {    
+    uint public constant MAX_UINT = 2**256 - 1;
+    uint public constant RATE_MULTIPLIER = 10**18;
 
     uint public constant OK = 1;
     uint public constant ERR_BZX_AUGUR_UNSUPPORTED_TOKEN = 420001;
@@ -127,24 +128,45 @@ contract IAugurNetworkAdapter {
     public
     returns (uint errorCode, uint remaining);
     
-    /// @notice Returns expected rate for given tokens
-    function getExpectedRate(
-        address src, 
-        address dest, 
-        uint shareAmount, 
-        uint loopLimit) 
-    public 
-    view 
-    returns (uint expectedRate, uint slippageRate);
-
-    function estimateRate(
-        address _src, 
-        address _dest, 
-        uint _destMaxAmount)         
+    function getBuyRate(
+        address _share,  
+        uint _shareAmount,
+        uint _loopLimit)         
     public
     view
-    returns (uint expectedRate, uint slippageRate, uint loopLimit);
+    returns (uint expectedRate, uint slippageRate);
+
+    function getSellRate(
+        address _share,  
+        uint _shareAmount,
+        uint _loopLimit)         
+    public
+    view
+    returns (uint expectedRate, uint slippageRate);
+    
+    function getSwapRate(
+        address _shareSrc,  
+        uint _shareSrcAmount,
+        address _shareDest,  
+        uint _loopLimit)         
+    public
+    view
+    returns (uint expectedRate, uint slippageRate);
  
+    function getVolume(
+        address _shareToken, 
+        Order.Types _orderType,
+        uint _loopLimit)         
+    public
+    view
+    returns(uint);
+
+    function getShareTokens(
+        address _market)         
+    public
+    view
+    returns (address []);
+
     function isShareToken(address token) 
     public 
     view 
