@@ -59,8 +59,11 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
 
     uint public constant RATE_MULTIPLIER = 10**18;
 
-    // allowed markets mapping ([order hash] -> [[maker address] -> [allowed or not]])
-    mapping (bytes32 => mapping (address => bool)) public allowedMarkets;  
+    // allowed markets mapping ([order hash] -> [[marget address] -> [allowed or not]])
+    mapping (bytes32 => mapping (address => bool)) public allowedMarkets;
+
+    // allowed markets mapping ([order hash] -> [array of allowed markets])
+    mapping (bytes32 => address[]) public allowedMarketsList;
 
     /// @notice Constructor
     constructor(
@@ -134,6 +137,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         for (uint idx = 0; idx < markets.length; idx++ ) {
             allowedMarkets[loanOrderHash][markets[idx]] = true;
         }
+        allowedMarketsList[loanOrderHash] = markets;
         
         return true;
     }
@@ -715,6 +719,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         for (uint i = 0; i < _markets.length; i++) {
             allowedMarkets[_orderHash][_markets[i]] = true;
         }
+        allowedMarketsList[_orderHash] = _markets;
 
         return true;
     }
