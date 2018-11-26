@@ -81,7 +81,7 @@ export default class Tokensale extends BZxComponent {
   state = { 
     loading: false, 
     error: false,
-    tokenBalance: 0,
+    tokenBalance: null,
     //totalTokens: 0,
     //totalTokenBonus: 0,
     //ethRate: 0,
@@ -90,7 +90,8 @@ export default class Tokensale extends BZxComponent {
     bzrxTokenAddress: null,
     showBuyDialog: false,
     buyAmount: 0,
-    affiliateHex: stringToHex(this.props.affiliate)
+    affiliateHex: stringToHex(this.props.affiliate),
+    ethRaised: null
   };
 
   async componentDidMount() {
@@ -131,22 +132,26 @@ export default class Tokensale extends BZxComponent {
 
   refreshTokenData = async () => {
     const { accounts } = this.props;
-    const { tokenContract } = this.state;
-    await this.setState({ loading: true });
+    const { tokenContract, tokensaleContract } = this.state;
+    await this.setState({ loading: true, tokenBalance: null, ethRaised: null });
     
     console.log(`Token contract:`, tokenContract._address);
 
     try {
-      const tokenBalance = await this.wrapAndRun(tokenContract.methods.balanceOf(accounts[0]).call());
-      
+      const tokenBalance = await window.pqueueGeneral.add(() => this.wrapAndRun(tokenContract.methods.balanceOf(accounts[0]).call()));
+            
       //const tokenData = await this.wrapAndRun(tokensaleContract.methods.purchases(accounts[0]).call());
       //console.log(tokenData);
 
       //const ethRate = await this.wrapAndRun(tokensaleContract.methods.getEthRate().call());
       //console.log(ethRate);
 
+      const ethRaised = await window.pqueueGeneral.add(() => this.wrapAndRun(tokensaleContract.methods.ethRaised().call()));
+      //console.log(ethRaised);
+
       this.setState({ 
         tokenBalance: tokenBalance,
+        ethRaised: ethRaised,
         loading: false, 
         error: false 
       });
@@ -231,9 +236,10 @@ export default class Tokensale extends BZxComponent {
       tokenBalance,
       tokensaleContract,
       tokenContract,
-      currentTokenBonus
+      currentTokenBonus,
+      ethRaised
     } = this.state;
-    if (error) {
+    /*if (error) {
       return (
         <div>
           <InfoContainer>
@@ -244,7 +250,7 @@ export default class Tokensale extends BZxComponent {
           </InfoContainer>
         </div>
       );
-    }
+    }*/
 
     const tokensaleContractAddress = tokensaleContract ? tokensaleContract._address : null;
     const tokensaleContractLink = `${this.props.bZx.etherscanURL}address/${tokensaleContractAddress}`;
@@ -295,23 +301,37 @@ export default class Tokensale extends BZxComponent {
             <br/>
 
             <DataPointContainer>
-              <Label>Token Balance</Label>
+              <Label>Current Token Price (locked)</Label>
               <DataPoint>
-                {fromBigNumber(
-                  tokenBalance,
+                0.000073 ETH
+              </DataPoint>
+            </DataPointContainer>
+
+            <DataPointContainer>
+              <Label>ETH Raised in Current Sale</Label>
+              <DataPoint>
+                {loading || ethRaised == null ? 
+                `Loading...` : 
+                fromBigNumber(
+                  ethRaised,
                   10 ** 18
-                )}
-                {` `}
-                {`BZRX`}
+                )+` ETH`
+                }
               </DataPoint>
             </DataPointContainer>
 
             <br/>
 
             <DataPointContainer>
-              <Label>Token Price (locked)</Label>
+              <Label>Your Token Balance</Label>
               <DataPoint>
-                0.000073 ETH
+                {loading || tokenBalance == null ? 
+                `Loading...` : 
+                  fromBigNumber(
+                  tokenBalance,
+                  10 ** 18
+                )+` BZRX`
+                }
               </DataPoint>
             </DataPointContainer>
 
