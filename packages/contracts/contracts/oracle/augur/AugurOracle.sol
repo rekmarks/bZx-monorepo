@@ -59,7 +59,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
 
     uint public constant RATE_MULTIPLIER = 10**18;
 
-    // allowed markets mapping ([order hash] -> [[marget address] -> [allowed or not]])
+    // allowed markets mapping ([order hash] -> [[market address] -> [allowed or not]])
     mapping (bytes32 => mapping (address => bool)) public allowedMarkets;
 
     // allowed markets mapping ([order hash] -> [array of allowed markets])
@@ -703,7 +703,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         return allowedMarkets[_orderhash][_market];
     }
 
-    function allowMarketTrading(bytes32 _orderHash, address[] _markets)
+    function setAllowedMarkets(bytes32 _orderHash, address[] _markets)
     public
     returns (bool) {
         require(_orderHash != bytes32(0x0), "AugurOracle::allowMarketTrading: Invalid order hash");
@@ -713,7 +713,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
 
         // TODO: ahiatsevich: should trader be permitted to change markets?        
         if (orderAux.maker != msg.sender) {
-            return false;
+            revert("orderAux.maker != msg.sender");
         }
 
         for (uint i = 0; i < _markets.length; i++) {
