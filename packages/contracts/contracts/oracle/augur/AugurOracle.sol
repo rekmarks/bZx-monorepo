@@ -681,12 +681,11 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
 
     function getShareVolume(
         address _shareToken, 
-        Order.Types _orderType,
-        uint _loopLimit)
+        Order.Types _orderType)
     public
     view
     returns (uint) {
-        return augurNetwork.getVolume(_shareToken, _orderType, _loopLimit);
+        return augurNetwork.getVolume(_shareToken, _orderType, augurLoopLimit);
     }
 
     function getShareTokens(address _market)
@@ -694,6 +693,34 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     view
     returns (address[]) {
         return augurNetwork.getShareTokens(_market);
+    }
+
+    function getSharesData(address _market) 
+    public
+    view
+    returns (address[] shares, uint[] volumes, Order.Types[] types) {
+        address[] memory tokens = getShareTokens(_market);
+        if (tokens.length == 0) {
+            return;
+        }
+
+        uint size = tokens.length;
+
+        shares = new address[](size * 2);
+        volumes = new uint[](size * 2);
+        types = new Order.Types[](size * 2);
+
+        for(uint i = 0; i < size; i++) {
+            address token = tokens[i];
+
+            shares[i] = token;
+            volumes[i] = getShareVolume(token, Order.Types.Ask);
+            types[i] = Order.Types.Ask;
+
+            shares[i + size] = token;
+            volumes[i + size] = getShareVolume(token, Order.Types.Bid);
+            types[i + size] = Order.Types.Bid;
+        }
     }
 
     function isMarketAllowed(bytes32 _orderhash, address _market) 
