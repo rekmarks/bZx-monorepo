@@ -679,6 +679,14 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     * Aux functions
     */
 
+    function getAllowedMarkets(
+        bytes32 _orderHash)
+    public
+    view
+    returns (address[]) {
+        return allowedMarketsList[_orderHash];
+    }
+
     function getShareVolume(
         address _shareToken, 
         Order.Types _orderType)
