@@ -157,7 +157,8 @@ contract OrderTakingFunctions is BZxStorage, InternalFunctions, InterestFunction
                 lenderRelayFee: orderValues[4],
                 traderRelayFee: orderValues[5],
                 makerRole: orderValues[8],
-                expirationUnixTimestampSec: orderValues[7]
+                expirationUnixTimestampSec: orderValues[7],
+                description: ""
             });
             
             if (!_verifyNewLoanOrder(
@@ -603,8 +604,8 @@ contract OrderTakingFunctions is BZxStorage, InternalFunctions, InterestFunction
             );
 
             if (totalInterestRequired > 0) {
-                interestTotal[loanOrder.loanOrderHash][loanPositionsIds[loanOrder.loanOrderHash][loanPosition.trader]] = 
-                    interestTotal[loanOrder.loanOrderHash][loanPositionsIds[loanOrder.loanOrderHash][loanPosition.trader]].add(totalInterestRequired);
+                interestTotal[loanPositionsIds[loanOrder.loanOrderHash][loanPosition.trader]] = 
+                    interestTotal[loanPositionsIds[loanOrder.loanOrderHash][loanPosition.trader]].add(totalInterestRequired);
 
                 // deposit interest token
                 if (! BZxVault(vaultContract).depositToken(
