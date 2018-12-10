@@ -61,7 +61,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
     ensureBalanceUnchanged()
     ensureTokenBalanceUnchanged(ERC20(_src))
     ensureTokenBalanceUnchanged(ERC20(_dest))
-    returns (uint, uint) {        
+    returns (uint, uint, uint) {        
         if(isWETHToken(_src) && isShareToken(_dest)) {
             return buyShares(_srcAmount, IShareToken(_dest), _maxDestAmount, RATE_MULTIPLIER.div(_price), _receiver, msg.sender, _loopLimit);
         } else if (isShareToken(_src) && isWETHToken(_dest)) {
@@ -70,7 +70,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
             return swapShares(IShareToken(_src), _srcAmount, IShareToken(_dest), _maxDestAmount, _price, _receiver, _loopLimit);
         }
         
-        return (ERR_BZX_AUGUR_UNSUPPORTED_TOKEN, 0);                      
+        return (ERR_BZX_AUGUR_UNSUPPORTED_TOKEN, 0, 0);                      
     }
     
     function getBuyRate(
@@ -238,19 +238,21 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         address _maker,
         uint _loopLimit) 
     internal
-    returns (uint, uint) {
+    returns (uint resultCode, uint usedWeth, uint boughtShares) {
         if (_maker != address(this)) {
             // process WETH received
             if (weth.allowance(_maker, address(this)) < _amountWETH) {
-                return (ERR_BZX_AUGUR_INSUFFICIENT_WETH_ALLOWANCE, 0);
+                return (ERR_BZX_AUGUR_INSUFFICIENT_WETH_ALLOWANCE, 0, 0);
             }
             require(weth.transferFrom(_maker, address(this), _amountWETH), "AugurAdapter::buyShares: Unable process WETH");            
         }
         
+        uint initialBalance = address(this).balance;
+        
         weth.withdraw(_amountWETH);
 
-        // do trade
-        uint remainings = getTradeService().publicFillBestOrderWithLimit.value(_amountWETH)(
+        // do trade, returns remaining amount, boughtShares is used because of Stack too deep. See below
+        boughtShares = getTradeService().publicFillBestOrderWithLimit.value(_amountWETH)(
             Order.TradeDirections.Long, 
             _share.getMarket(), 
             _share.getOutcome(), 
@@ -258,15 +260,22 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
             _price, 
             "augur_adapter_buy_trade_group_id", 
             _loopLimit);        
+                
+        usedWeth = _amountWETH.sub(address(this).balance.sub(initialBalance));
+        weth.deposit.value(_amountWETH.sub(usedWeth))();
+        
+        boughtShares = _amountShare.sub(boughtShares);
 
         if (_receiver != address(this)) {
             // transfer shares to sender
-            require(_share.transfer(_receiver, _amountShare.sub(remainings)), "AugurAdapter::buyShares: Unable transfer shares");
+            require(_share.transfer(_receiver, boughtShares), "AugurAdapter::buyShares: Unable transfer shares");
+            // transfer remaining weth to sender
+            require(weth.transfer(_receiver, _amountWETH.sub(usedWeth)), "AugurAdapter::buyShares: Unable transfer weth");
         }
         
-        emit AugurOracleTrade(Order.TradeDirections.Long, _share, _amountWETH, _amountShare.sub(remainings), _price);
+        emit AugurOracleTrade(Order.TradeDirections.Long, _share, usedWeth, boughtShares, _price);
 
-        return (OK, _amountShare.sub(remainings));
+        return (OK, usedWeth, boughtShares);
     }
 
     // @dev Sell shares
@@ -279,11 +288,11 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         address _maker,
         uint _loopLimit) 
     internal
-    returns (uint, uint) {  
+    returns (uint resultCode, uint usedShares, uint boughtWeth) {  
         // process ShareToken received
         if (_maker != address(this)) {
             if (_share.allowance(_maker, address(this)) < _amountShare) {
-                return (ERR_BZX_AUGUR_INSUFFICIENT_STOKEN_ALLOWANCE, 0);
+                return (ERR_BZX_AUGUR_INSUFFICIENT_STOKEN_ALLOWANCE, 0, 0);
             }
 
             require(_share.transferFrom(_maker, address(this), _amountShare), "AugurAdapter::sellShares: Unable process shares");
@@ -301,8 +310,10 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
             "augur_adapter_trade_group_id", 
             _loopLimit);        
 
-        uint receivedValue = address(this).balance.sub(initialBalance);
-        weth.deposit.value(receivedValue)();
+        boughtWeth = address(this).balance.sub(initialBalance);
+        weth.deposit.value(boughtWeth)();
+
+        usedShares = _amountShare.sub(remainings);
 
         if (_receiver != address(this)) {
             // transfer remaining shares to sender
@@ -311,12 +322,12 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
             }
                 
             // transfer remaining WETH to sender        
-            require(weth.transfer(_receiver, receivedValue), "AugurAdapter::sellShares: Unable transfer received WETH to sender");        
+            require(weth.transfer(_receiver, boughtWeth), "AugurAdapter::sellShares: Unable transfer received WETH to sender");        
         }
         
-        emit AugurOracleTrade(Order.TradeDirections.Short, _share, receivedValue, _amountShare.sub(remainings), _price);
+        emit AugurOracleTrade(Order.TradeDirections.Short, _share, boughtWeth, usedShares, _price);
 
-        return (OK, receivedValue);
+        return (OK, usedShares, boughtWeth);
     }
 
     // @dev Exchange shares tokens
@@ -330,14 +341,15 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         address _receiver, 
         uint _loopLimit) 
     internal
-    returns (uint result, uint bought) {         
+    ensureTokenBalanceUnchanged(weth)
+    returns (uint result, uint used, uint bought) {         
         // 1st step: sell src shares token
-        (uint expectedRateSrc,) = calculateRate(_src, _srcAmount, address(weth), MAX_UINT, _loopLimit);
+        (uint rate,) = calculateRate(_src, _srcAmount, address(weth), MAX_UINT, _loopLimit);
 
-        (result, bought) = sellShares(
+        (result, , bought) = sellShares(
             _src, 
             _srcAmount, 
-            expectedRateSrc.div(RATE_MULTIPLIER), 
+            rate.div(RATE_MULTIPLIER), 
             address(this), 
             msg.sender,
             _loopLimit);
@@ -345,18 +357,20 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         require(result == OK, "AugurAdapter::swapShares: Can't sell shares");
 
         // 2nd step: buy dest shares token
-        (uint expectedRateDest,) = calculateRate(address(weth), bought, _dest, MAX_UINT, _loopLimit);
+        (rate,) = calculateRate(address(weth), bought, _dest, MAX_UINT, _loopLimit);
 
-        (result, bought) = buyShares(
+        (result, , bought) = buyShares(
             bought, 
             _dest, 
             _maxDestAmount, 
-            RATE_MULTIPLIER.div(expectedRateDest), 
+            RATE_MULTIPLIER.div(rate), 
             _receiver, 
             address(this), 
             _loopLimit);
 
         require(result == OK, "AugurAdapter::swapShares: Can't buy shares");
+
+        used = _srcAmount;
 
         // 3rd step: verify the rate, make sure that the price was valid
         //require(_price > resultCodeDest.mul(10**18)div(expectedRateSrc), "AugurAdapter::swapShares: Trade is underpriced");

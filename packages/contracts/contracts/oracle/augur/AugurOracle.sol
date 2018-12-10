@@ -45,7 +45,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     uint public gasUpperBound = 600000;
 
     // Orders depths
-    uint public augurLoopLimit = 1;
+    uint public augurLoopLimit = 3;
     uint public DELETE_2 = 0; // TODO: not used
 
     // bZx vault address    
@@ -103,7 +103,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         emaValue = 8 * 10**9 wei; // set an initial price average for gas (8 gwei)
         emaPeriods = 10; // set periods to use for EMA calculation
         
-        augurLoopLimit = 1;
+        augurLoopLimit = 3;
         gasUpperBound = 600000;
         bountyRewardPercent = 110;
         interestFeePercent = 10;
@@ -173,26 +173,26 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     onlyBZx
     updatesEMA(tx.gasprice)
     returns (bool) {
-        // make sure that a trade is permitted by maker
-        address positionToken = loanPosition.positionTokenAddressFilled;
-        address loadToken = loanOrder.loanTokenAddress;
+        // // make sure that a trade is permitted by maker
+        // address positionToken = loanPosition.positionTokenAddressFilled;
+        // address loadToken = loanOrder.loanTokenAddress;
 
-        if (augurNetwork.isShareToken(positionToken)) {
-            if (!isMarketAllowed(loanOrder.loanOrderHash, IShareToken(positionToken).getMarket())) {
-                return false;
-            }
-        }
+        // if (augurNetwork.isShareToken(positionToken)) {
+        //     if (!isMarketAllowed(loanOrder.loanOrderHash, IShareToken(positionToken).getMarket())) {
+        //         return false;
+        //     }
+        // }
 
-        if (augurNetwork.isShareToken(loadToken)) {        
-            if (!isMarketAllowed(loanOrder.loanOrderHash, IShareToken(loadToken).getMarket())) {
-                return false;
-            }
-        }        
+        // if (augurNetwork.isShareToken(loadToken)) {        
+        //     if (!isMarketAllowed(loanOrder.loanOrderHash, IShareToken(loadToken).getMarket())) {
+        //         return false;
+        //     }
+        // }        
 
-        // make sure that an order is still valid
-        if (_shouldLiquidate(loanOrder, loanPosition)) {
-            return false;
-        }
+        // // make sure that an order is still valid
+        // if (_shouldLiquidate(loanOrder, loanPosition)) {
+        //     return false;
+        // }
 
         return true;
     }
@@ -398,7 +398,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         (uint rate, uint worstRate) = augurNetwork.getSwapRate(_src, _srcAmount, _dest, augurLoopLimit);
         
         uint result;
-        (result, destToken) = augurNetwork.trade(_src, _srcAmount, _dest, _srcAmount.mul(rate).div(RATE_MULTIPLIER), worstRate, vault, augurLoopLimit);
+        (result, srcAmount, destToken) = augurNetwork.trade(_src, _srcAmount, _dest, _srcAmount.mul(rate).div(RATE_MULTIPLIER), worstRate, vault, augurLoopLimit);
                 
         require(result == augurNetwork.OK(), "AugurOracle::_doTrade: trade failed");
 
@@ -470,7 +470,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
                 require(EIP20(loanPosition.collateralTokenAddressFilled).approve(augurNetwork, collateralTokenAmountUsed), 
                     "AugurOracle::_doTrade: Unable to set allowance");
 
-                (, loanTokenAmountCovered) = augurNetwork.trade(
+                (, collateralTokenAmountUsed, loanTokenAmountCovered) = augurNetwork.trade(
                     loanPosition.collateralTokenAddressFilled, 
                     collateralTokenAmountUsed, 
                     loanOrder.loanTokenAddress, 
@@ -504,6 +504,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     public
     view
     returns (bool) {
+        return false;
         return (
             getCurrentMarginAmount(
                 loanTokenAddress,
