@@ -7,6 +7,7 @@ pragma solidity 0.4.24;
 
 pragma experimental ABIEncoderV2;
 
+import "openzeppelin-solidity/contracts/math/Math.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "./IAugurNetworkAdapter.sol";
@@ -166,8 +167,8 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     }
 
     function didTradePosition(
-        BZxObjects.LoanOrder memory loanOrder, 
-        BZxObjects.LoanPosition memory loanPosition, 
+        BZxObjects.LoanOrder memory /* loanOrder */, 
+        BZxObjects.LoanPosition memory /* loanPosition */, 
         uint)
     public
     onlyBZx
@@ -250,7 +251,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         return true;
     }
 
-    function didWithdrawProfit(
+    function didWithdrawPosition(
         BZxObjects.LoanOrder memory, 
         BZxObjects.LoanPosition memory, 
         uint, 
@@ -263,18 +264,6 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
     }
 
     function didDepositPosition(
-        BZxObjects.LoanOrder memory,
-        BZxObjects.LoanPosition memory,
-        uint,
-        uint)
-    public
-    onlyBZx
-    updatesEMA(tx.gasprice)
-    returns (bool) {
-        return true;
-    }
-
-    function didWithdrawPosition(
         BZxObjects.LoanOrder memory,
         BZxObjects.LoanPosition memory,
         uint,
@@ -532,31 +521,44 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         destAmount = srcAmount.mul(rate).div(RATE_MULTIPLIER);
     }
 
-    // returns bool isProfit, uint profitOrLoss
-    // the position's profit/loss denominated in positionToken
-    function getProfitOrLoss(
-        address positionToken,
-        address loanToken,
-        uint positionAmount,
-        uint loanAmount)
+    // returns bool isPositive, uint offsetAmount
+    // the position's offset from loan principal denominated in positionToken
+    function getPositionOffset(
+        BZxObjects.LoanOrder memory loanOrder,
+        BZxObjects.LoanPosition memory loanPosition)        
     public
     view
-    returns (bool, uint) {
-        (, uint slippage) = getExpectedRate(loanToken, positionToken, loanAmount);
-
-        uint estimatedPositionAmount;
-        if (loanToken == positionToken) {
-            estimatedPositionAmount = loanAmount;
+    returns (bool isPositive, uint offsetAmount) {
+        bool isPositionInWETH = isWETHToken(loanPosition.positionTokenAddressFilled);
+        
+        uint collateralToPositionAmount;
+        if (loanPosition.collateralTokenAddressFilled == loanPosition.positionTokenAddressFilled) {
+            collateralToPositionAmount = loanPosition.collateralTokenAmountFilled;
         } else {
-            estimatedPositionAmount = isWETHToken(positionToken)
-                ? loanAmount.mul(RATE_MULTIPLIER).div(slippage)
-                : loanAmount.mul(slippage).div(RATE_MULTIPLIER);
+            (, uint collateralSlippage) = getExpectedRate(loanPosition.collateralTokenAddressFilled, loanPosition.positionTokenAddressFilled, loanPosition.collateralTokenAmountFilled);
+            collateralToPositionAmount = isPositionInWETH
+                ? loanPosition.collateralTokenAmountFilled.mul(RATE_MULTIPLIER).div(collateralSlippage)
+                : loanPosition.collateralTokenAmountFilled.mul(collateralSlippage).div(RATE_MULTIPLIER);
         }
 
-        if (positionAmount > estimatedPositionAmount) {
-            return (true, positionAmount - estimatedPositionAmount);
+        uint loanToPositionAmount;
+        if (loanOrder.loanTokenAddress == loanPosition.positionTokenAddressFilled) {
+            loanToPositionAmount = loanPosition.loanTokenAmountFilled;
         } else {
-            return (false, estimatedPositionAmount - positionAmount);
+            (, uint loanSlippage) = getExpectedRate(loanOrder.loanTokenAddress, loanPosition.positionTokenAddressFilled, loanPosition.loanTokenAmountFilled);
+            loanToPositionAmount = isPositionInWETH
+                ? loanPosition.loanTokenAmountFilled.mul(RATE_MULTIPLIER).div(loanSlippage)
+                : loanPosition.loanTokenAmountFilled.mul(loanSlippage).div(RATE_MULTIPLIER);
+        }
+
+        uint initialPosition = loanToPositionAmount.add(loanToPositionAmount.mul(loanOrder.initialMarginAmount).div(100));
+        uint currentPosition = loanPosition.positionTokenAmountFilled.add(collateralToPositionAmount);
+        if (currentPosition > initialPosition) {
+            isPositive = true;
+            offsetAmount = Math.min256(loanPosition.positionTokenAmountFilled, currentPosition - initialPosition);
+        } else {
+            isPositive = false;
+            offsetAmount = initialPosition - currentPosition;
         }
     }
 

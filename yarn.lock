@@ -14569,7 +14569,17 @@ solc@0.4.24, solc@^0.4.2, "solc_0.4.24@npm:solc@v0.4.24":
     semver "^5.3.0"
     yargs "^4.7.1"
 
-solc@^0.5.0, "solc_latest@npm:solc":
+solc@0.4.25:
+  version "0.4.25"
+  resolved "https://registry.yarnpkg.com/solc/-/solc-0.4.25.tgz#06b8321f7112d95b4b903639b1138a4d292f5faa"
+  dependencies:
+    fs-extra "^0.30.0"
+    memorystream "^0.3.1"
+    require-from-string "^1.1.0"
+    semver "^5.3.0"
+    yargs "^4.7.1"
+
+"solc_latest@npm:solc":
   version "0.5.1"
   resolved "https://registry.yarnpkg.com/solc/-/solc-0.5.1.tgz#2867cb886b9475f0e8ee90566c1fad3e2d6ed90a"
   dependencies:
@@ -15686,13 +15696,13 @@ truffle-resolver@^3.0.0:
     truffle-expect "0.0.3"
     truffle-provisioner "^0.1.0"
 
-truffle@^5.0.0-next.19:
-  version "5.0.0-next.19"
-  resolved "https://registry.yarnpkg.com/truffle/-/truffle-5.0.0-next.19.tgz#bb1c782826572a7d4d2754cf534741e772df6bc5"
+truffle@5.0.0-beta.1:
+  version "5.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/truffle/-/truffle-5.0.0-beta.1.tgz#2ac40eb6128c1fa66b76c63567185e8fca17950b"
   dependencies:
     mocha "^4.1.0"
     original-require "1.0.1"
-    solc "^0.5.0"
+    solc "0.4.25"
 
 tryer@^1.0.0:
   version "1.0.1"

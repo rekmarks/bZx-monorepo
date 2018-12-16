@@ -337,7 +337,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         uint _srcAmount, 
         IShareToken _dest, 
         uint _maxDestAmount, 
-        uint _price, 
+        uint /* _price */, 
         address _receiver, 
         uint _loopLimit) 
     internal
