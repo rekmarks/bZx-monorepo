@@ -126,7 +126,7 @@ contract IAugurNetworkAdapter {
         address receiver,
         uint loopLimit)             
     public
-    returns (uint errorCode, uint remaining);
+    returns (uint errorCode, uint used, uint remaining);
     
     function getBuyRate(
         address _share,  
