@@ -366,7 +366,6 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         uint)
     public
     onlyBZx
-    updatesEMA(tx.gasprice)
     returns (uint destToken, uint srcAmount) {
         // make sure that the oracle have received enough src token to do a trade
         require(EIP20(_src).balanceOf(address(this)) >= _srcAmount, "AugurOracle::_doTrade: Src token balance is not enough");
