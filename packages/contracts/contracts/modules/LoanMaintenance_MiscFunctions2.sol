@@ -3,26 +3,26 @@
  * Licensed under the Apache License, Version 2.0.
  */
 
-pragma solidity 0.4.24;
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "openzeppelin-solidity/contracts/math/Math.sol";
+import "../openzeppelin-solidity/Math.sol";
 
 import "../proxy/BZxProxiable.sol";
-import "../shared/InternalFunctions.sol";
+import "../shared/MiscFunctions.sol";
 
 import "../oracle/OracleInterface.sol";
 
 import "../tokens/EIP20.sol";
 
 
-contract BZxLoanMaintenance2 is BZxStorage, BZxProxiable, InternalFunctions {
+contract LoanMaintenance_MiscFunctions2 is BZxStorage, BZxProxiable, MiscFunctions {
     using SafeMath for uint256;
 
     constructor() public {}
 
-    function()  
-        public
+    function()
+        external
     {
         revert("fallback not allowed");
     }
@@ -227,14 +227,14 @@ contract BZxLoanMaintenance2 is BZxStorage, BZxProxiable, InternalFunctions {
     /// @return True on success
     function setLoanOrderDesc(
         bytes32 loanOrderHash,
-        string desc)
+        string calldata desc)
         external
         nonReentrant
         tracksGas
         returns (bool)
     {
         LoanOrderAux storage loanOrderAux = orderAux[loanOrderHash];
-        require(loanOrderAux.maker == msg.sender, "BZxLoanMaintenance::setLoanOrderDesc: loanOrderAux.maker != msg.sender");
+        require(loanOrderAux.makerAddress == msg.sender, "BZxLoanMaintenance::setLoanOrderDesc: loanOrderAux.makerAddress != msg.sender");
         loanOrderAux.description = desc;
 
         return true;

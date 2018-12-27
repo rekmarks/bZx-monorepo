@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0.
  */
 
-pragma solidity 0.4.24;
+pragma solidity 0.5.2;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../openzeppelin-solidity/Ownable.sol";
 
 import "./BZRxToken.sol";
 import "../../shared/WETHInterface.sol";
@@ -63,7 +63,7 @@ contract BZRxTokenSale is Ownable {
         uint _previousAmountRaised)
         public
     {
-        require(_bonusMultiplier > 100);
+        require(_bonusMultiplier > 100 * 10**18);
         
         bZRxTokenContractAddress = _bZRxTokenContractAddress;
         bZxVaultAddress = _bZxVaultAddress;
@@ -72,8 +72,8 @@ contract BZRxTokenSale is Ownable {
         ethRaised = _previousAmountRaised;
     }
 
-    function()  
-        public
+    function()
+        external
         payable 
     {
         if (msg.sender != wethContractAddress && msg.sender != owner)
@@ -95,7 +95,7 @@ contract BZRxTokenSale is Ownable {
                             .mul(10**18).div(tokenPrice);   // fixed ETH price per token (0.000073 ETH)
 
         uint tokenAmountAndBonus = tokenAmount
-                                        .mul(bonusMultiplier).div(100);
+                                        .mul(bonusMultiplier).div(10**20);
 
         TokenPurchases storage purchase = purchases[msg.sender];
         
@@ -141,7 +141,7 @@ contract BZRxTokenSale is Ownable {
 
             require(StandardToken(wethContractAddress).transferFrom(
                 _from,
-                this,
+                address(this),
                 wethValue
             ), "weth transfer failed");
 
@@ -219,7 +219,7 @@ contract BZRxTokenSale is Ownable {
         onlyOwner 
         returns (bool)
     {
-        require(bonusMultiplier != _newBonusMultiplier && _newBonusMultiplier > 100);
+        require(bonusMultiplier != _newBonusMultiplier && _newBonusMultiplier > 100 * 10**18);
         emit BonusChanged(bonusMultiplier, _newBonusMultiplier);
         bonusMultiplier = _newBonusMultiplier;
         return true;
@@ -230,7 +230,7 @@ contract BZRxTokenSale is Ownable {
         onlyOwner 
         returns (bool)
     {
-        uint balance = StandardToken(wethContractAddress).balanceOf.gas(4999)(this);
+        uint balance = StandardToken(wethContractAddress).balanceOf.gas(4999)(address(this));
         if (balance == 0)
             return false;
 
@@ -239,7 +239,7 @@ contract BZRxTokenSale is Ownable {
     }
 
     function transferEther(
-        address _to,
+        address payable _to,
         uint _value)
         public
         onlyOwner
@@ -261,7 +261,7 @@ contract BZRxTokenSale is Ownable {
         onlyOwner
         returns (bool)
     {
-        uint balance = StandardToken(_tokenAddress).balanceOf.gas(4999)(this);
+        uint balance = StandardToken(_tokenAddress).balanceOf.gas(4999)(address(this));
         if (_value > balance) {
             return StandardToken(_tokenAddress).transfer(
                 _to,
@@ -287,8 +287,8 @@ contract BZRxTokenSale is Ownable {
     }
 
     function setWhitelist(
-        address[] _users,
-        uint[] _values) 
+        address[] memory _users,
+        uint[] memory _values) 
         public 
         onlyOwner 
         returns (bool)

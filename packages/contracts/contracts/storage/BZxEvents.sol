@@ -3,15 +3,15 @@
  * Licensed under the Apache License, Version 2.0.
  */
  
-pragma solidity 0.4.24;
+pragma solidity 0.5.2;
 
 
 contract BZxEvents {
 
     event LogLoanAdded (
         bytes32 indexed loanOrderHash,
-        address adder,
-        address indexed maker,
+        address adderAddress,
+        address indexed makerAddress,
         address indexed feeRecipientAddress,
         uint lenderRelayFee,
         uint traderRelayFee,
@@ -33,7 +33,7 @@ contract BZxEvents {
     );
 
     event LogLoanCancelled(
-        address indexed maker,
+        address indexed makerAddress,
         uint cancelLoanTokenAmount,
         uint remainingLoanTokenAmount,
         bytes32 indexed loanOrderHash
@@ -55,15 +55,6 @@ contract BZxEvents {
         address destTokenAddress,
         uint sourceTokenAmount,
         uint destTokenAmount,
-        uint positionId
-    );
-
-    event LogMarginLevels(
-        bytes32 indexed loanOrderHash,
-        address indexed trader,
-        uint initialMarginAmount,
-        uint maintenanceMarginAmount,
-        uint currentMarginAmount,
         uint positionId
     );
 

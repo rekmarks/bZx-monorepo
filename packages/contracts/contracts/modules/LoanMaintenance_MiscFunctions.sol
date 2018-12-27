@@ -3,25 +3,25 @@
  * Licensed under the Apache License, Version 2.0.
  */
 
-pragma solidity 0.4.24;
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "openzeppelin-solidity/contracts/math/Math.sol";
+import "../openzeppelin-solidity/Math.sol";
 
 import "../proxy/BZxProxiable.sol";
-import "../shared/InternalFunctions.sol";
+import "../shared/MiscFunctions.sol";
 
 import "../BZxVault.sol";
 import "../oracle/OracleInterface.sol";
 
 
-contract BZxLoanMaintenance is BZxStorage, BZxProxiable, InternalFunctions {
+contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunctions {
     using SafeMath for uint256;
 
     constructor() public {}
 
-    function()  
-        public
+    function()
+        external
     {
         revert("fallback not allowed");
     }
@@ -133,18 +133,27 @@ contract BZxLoanMaintenance is BZxStorage, BZxProxiable, InternalFunctions {
                 loanPosition.positionTokenAmountFilled);
         }
 
-        uint initialCollateralTokenAmount = _getCollateralRequired(
-            loanOrder.loanTokenAddress,
-            loanPosition.collateralTokenAddressFilled,
-            oracleAddresses[loanOrder.oracleAddress],
-            positionToLoanTokenAmount < loanPosition.loanTokenAmountFilled ?
-                loanPosition.loanTokenAmountFilled.add(loanPosition.loanTokenAmountFilled.sub(positionToLoanTokenAmount).mul(100).div(loanOrder.initialMarginAmount)) :
-                loanPosition.loanTokenAmountFilled.sub(positionToLoanTokenAmount.sub(loanPosition.loanTokenAmountFilled).mul(100).div(loanOrder.initialMarginAmount)),
-            loanOrder.initialMarginAmount
-        );
+        uint positionOffsetForCollateral = positionToLoanTokenAmount < loanPosition.loanTokenAmountFilled ?
+            (loanPosition.loanTokenAmountFilled - positionToLoanTokenAmount).mul(10**20).div(loanOrder.initialMarginAmount) :
+            (positionToLoanTokenAmount - loanPosition.loanTokenAmountFilled).mul(10**20).div(loanOrder.initialMarginAmount);
 
-        if (initialCollateralTokenAmount == 0 || initialCollateralTokenAmount >= loanPosition.collateralTokenAmountFilled) {
-            revert("BZxLoanHealth::withdrawCollateral: initialCollateralTokenAmount == 0 || initialCollateralTokenAmount >= loanPosition.collateralTokenAmountFilled");
+        uint initialCollateralTokenAmount;
+        if (positionToLoanTokenAmount >= loanPosition.loanTokenAmountFilled && positionOffsetForCollateral >= loanPosition.loanTokenAmountFilled) {
+            initialCollateralTokenAmount = 0;
+        } else {
+            initialCollateralTokenAmount = _getCollateralRequired(
+                loanOrder.loanTokenAddress,
+                loanPosition.collateralTokenAddressFilled,
+                oracleAddresses[loanOrder.oracleAddress],
+                positionToLoanTokenAmount < loanPosition.loanTokenAmountFilled ?
+                    loanPosition.loanTokenAmountFilled.add(positionOffsetForCollateral) :
+                    loanPosition.loanTokenAmountFilled.sub(positionOffsetForCollateral),
+                loanOrder.initialMarginAmount
+            );
+        }
+
+        if (initialCollateralTokenAmount >= loanPosition.collateralTokenAmountFilled) {
+            return 0;
         }
         
         excessCollateral = Math.min256(withdrawAmount, loanPosition.collateralTokenAmountFilled-initialCollateralTokenAmount);
@@ -214,27 +223,34 @@ contract BZxLoanMaintenance is BZxStorage, BZxProxiable, InternalFunctions {
                 loanPosition.positionTokenAmountFilled);
         }
 
+        uint positionOffsetForCollateral = positionToLoanTokenAmount < loanPosition.loanTokenAmountFilled ?
+            (loanPosition.loanTokenAmountFilled - positionToLoanTokenAmount).mul(10**20).div(loanOrder.initialMarginAmount) :
+            (positionToLoanTokenAmount - loanPosition.loanTokenAmountFilled).mul(10**20).div(loanOrder.initialMarginAmount);
+
         // the new collateral amount must be enough to satify the initial margin requirement of the loan
-        collateralTokenAmountFilled = _getCollateralRequired(
-            loanOrder.loanTokenAddress,
-            collateralTokenFilled,
-            oracleAddresses[loanOrder.oracleAddress],
-            positionToLoanTokenAmount < loanPosition.loanTokenAmountFilled ?
-                loanPosition.loanTokenAmountFilled.add(loanPosition.loanTokenAmountFilled.sub(positionToLoanTokenAmount).mul(100).div(loanOrder.initialMarginAmount)) :
-                loanPosition.loanTokenAmountFilled.sub(positionToLoanTokenAmount.sub(loanPosition.loanTokenAmountFilled).mul(100).div(loanOrder.initialMarginAmount)),
-            loanOrder.initialMarginAmount
-        );
-        if (collateralTokenAmountFilled == 0) {
-            revert("BZxLoanHealth::changeCollateral: collateralTokenAmountFilled == 0");
+        if (positionToLoanTokenAmount >= loanPosition.loanTokenAmountFilled && positionOffsetForCollateral >= loanPosition.loanTokenAmountFilled) {
+            collateralTokenAmountFilled = 0;
+        } else {
+            collateralTokenAmountFilled = _getCollateralRequired(
+                loanOrder.loanTokenAddress,
+                collateralTokenFilled,
+                oracleAddresses[loanOrder.oracleAddress],
+                positionToLoanTokenAmount < loanPosition.loanTokenAmountFilled ?
+                    loanPosition.loanTokenAmountFilled.add(positionOffsetForCollateral) :
+                    loanPosition.loanTokenAmountFilled.sub(positionOffsetForCollateral),
+                loanOrder.initialMarginAmount
+            );
         }
 
-        // transfer the new collateral token from the trader to the vault
-        if (! BZxVault(vaultContract).depositToken(
-            collateralTokenFilled,
-            msg.sender,
-            collateralTokenAmountFilled
-        )) {
-            revert("BZxLoanHealth::changeCollateral: BZxVault.depositToken new collateral failed");
+        if (collateralTokenAmountFilled > 0) {
+            // transfer the new collateral token from the trader to the vault
+            if (! BZxVault(vaultContract).depositToken(
+                collateralTokenFilled,
+                msg.sender,
+                collateralTokenAmountFilled
+            )) {
+                revert("BZxLoanHealth::changeCollateral: BZxVault.depositToken new collateral failed");
+            }
         }
 
         // transfer the old collateral token from the vault to the trader
@@ -299,7 +315,7 @@ contract BZxLoanMaintenance is BZxStorage, BZxProxiable, InternalFunctions {
             }
             
             uint depositTokenAmountUsed;
-            (positionTokenAmountReceived, depositTokenAmountUsed) = OracleInterface(oracleAddresses[loanOrder.oracleAddress]).doTrade(
+            (positionTokenAmountReceived, depositTokenAmountUsed) = OracleInterface(oracleAddresses[loanOrder.oracleAddress]).trade(
                 depositTokenAddress,
                 loanPosition.positionTokenAddressFilled,
                 depositAmount,
@@ -434,18 +450,18 @@ contract BZxLoanMaintenance is BZxStorage, BZxProxiable, InternalFunctions {
     * Constant Internal functions
     */
     function _getPositionOffset(
-        LoanOrder loanOrder,
-        LoanPosition loanPosition)
+        LoanOrder memory loanOrder,
+        LoanPosition memory loanPosition)
         internal
         view
         returns (bool isPositive, uint offsetAmount, address positionTokenAddress)
     {
         if (loanOrder.loanTokenAddress == address(0)) {
-            return;
+            return (false,0,address(0));
         }
 
         if (loanPosition.loanTokenAmountFilled == 0 || !loanPosition.active) {
-            return;
+            return (false,0,address(0));
         }
 
         (isPositive, offsetAmount) = OracleInterface(oracleAddresses[loanOrder.oracleAddress]).getPositionOffset(loanOrder, loanPosition);

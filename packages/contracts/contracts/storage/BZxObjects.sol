@@ -3,7 +3,7 @@
  * Licensed under the Apache License, Version 2.0.
  */
  
-pragma solidity 0.4.24;
+pragma solidity 0.5.2;
 
 
 contract BZxObjects {
@@ -27,12 +27,15 @@ contract BZxObjects {
     }
 
     struct LoanOrderAux {
-        address maker;
+        address makerAddress;
+        address takerAddress;
         address feeRecipientAddress;
+        address tradeTokenToFillAddress;
         uint lenderRelayFee;
         uint traderRelayFee;
         uint makerRole;
         uint expirationUnixTimestampSec;
+        bool withdrawOnOpen;
         string description;
     }
 

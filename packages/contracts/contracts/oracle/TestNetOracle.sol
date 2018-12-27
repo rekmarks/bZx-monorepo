@@ -3,7 +3,7 @@
  * Licensed under the Apache License, Version 2.0.
  */
 
-pragma solidity 0.4.24;
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
 import "./BZxOracle.sol";
@@ -24,6 +24,8 @@ contract TestNetOracle is BZxOracle {
 
     address public faucetContract;
 
+    mapping (address => mapping (address => uint)) public rates;
+
     constructor(
         address _vaultContract,
         address _kyberContract,
@@ -38,11 +40,24 @@ contract TestNetOracle is BZxOracle {
         payable
     {}
 
-    function() public payable {} // solhint-disable-line no-empty-blocks
+    function() external payable {} // solhint-disable-line no-empty-blocks
 
     /*
     * Owner functions
     */
+
+    function setRates(
+        address sourceTokenAddress,
+        address destTokenAddress,
+        uint rate)
+        public
+        onlyOwner
+    {
+        if (sourceTokenAddress != destTokenAddress) {
+            rates[sourceTokenAddress][destTokenAddress] = rate;
+            rates[destTokenAddress][sourceTokenAddress] = SafeMath.div(10**36, rate);
+        }
+    }
 
     function setFaucetContractAddress(
         address newAddress) 
@@ -69,13 +84,23 @@ contract TestNetOracle is BZxOracle {
             expectedRate = 10**18;
             slippageRate = 0;
         } else {
-            expectedRate = 10**18;
-            //expectedRate = (uint(block.blockhash(block.number-1)) % 100 + 1).mul(10**18);
+            if (rates[sourceTokenAddress][destTokenAddress] != 0) {
+                expectedRate = rates[sourceTokenAddress][destTokenAddress];
+            } else {
+                uint sourceToEther = rates[sourceTokenAddress][wethContract] != 0 ?
+                    rates[sourceTokenAddress][wethContract] :
+                    10**18;
+                uint etherToDest = rates[wethContract][destTokenAddress] != 0 ?
+                    rates[wethContract][destTokenAddress] :
+                    10**18;
+
+                expectedRate = sourceToEther.mul(etherToDest).div(10**18);
+            }
             slippageRate = 0;
         }
     }
 
-    function _doTrade(
+    function _trade(
         address sourceTokenAddress,
         address destTokenAddress,
         uint sourceTokenAmount,
@@ -99,7 +124,7 @@ contract TestNetOracle is BZxOracle {
                 destTokenAddress,
                 vaultContract,
                 destTokenAmountReceived)) {
-                revert("TestNetOracle::_doTrade: _transferToken failed");
+                revert("TestNetOracle::_trade: _transferToken failed");
             }
 
             if (sourceTokenAmountUsed < sourceTokenAmount) {
@@ -108,7 +133,7 @@ contract TestNetOracle is BZxOracle {
                     sourceTokenAddress,
                     vaultContract,
                     sourceTokenAmount-sourceTokenAmountUsed)) {
-                    revert("TestNetOracle::_doTrade: _transferToken failed");
+                    revert("TestNetOracle::_trade: _transferToken failed");
                 }
             }
         } else {
@@ -130,7 +155,7 @@ contract TestNetOracle is BZxOracle {
             require(Faucet(faucetContract).oracleExchange(
                 destTokenAddress,
                 vaultContract,
-                destTokenAmountReceived), "TestNetOracle::_doTrade: trade failed");
+                destTokenAmountReceived), "TestNetOracle::_trade: trade failed");
 
             if (sourceTokenAmountUsed < sourceTokenAmount) {
                 // send unused source token back
@@ -138,13 +163,13 @@ contract TestNetOracle is BZxOracle {
                     sourceTokenAddress,
                     vaultContract,
                     sourceTokenAmount-sourceTokenAmountUsed)) {
-                    revert("TestNetOracle::_doTrade: _transferToken failed");
+                    revert("TestNetOracle::_trade: _transferToken failed");
                 }
             }
         }
     }
 
-    function _doTradeForWeth(
+    function _tradeForWeth(
         address /*sourceTokenAddress*/,
         uint /* sourceTokenAmount */,
         address /*receiver*/,
@@ -155,7 +180,7 @@ contract TestNetOracle is BZxOracle {
         destTokenAmountReceived = 0;//destEthAmountNeeded < sourceTokenAmount ? destEthAmountNeeded : sourceTokenAmount;
     }
 
-    function _doTradeWithWeth(
+    function _tradeWithWeth(
         address destTokenAddress,
         uint sourceEthAmount,
         address receiver,
@@ -167,6 +192,6 @@ contract TestNetOracle is BZxOracle {
         require(Faucet(faucetContract).oracleExchange(
             destTokenAddress,
             receiver,
-            destTokenAmountReceived), "TestNetOracle::_doTrade: trade failed");
+            destTokenAmountReceived), "TestNetOracle::_trade: trade failed");
     }
 }
