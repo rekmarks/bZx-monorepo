@@ -1,6 +1,6 @@
-pragma solidity 0.4.24;
+pragma solidity 0.5.2;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../../openzeppelin-solidity/SafeMath.sol";
 import "./IAugurNetworkAdapter.sol";
 
 
@@ -147,13 +147,13 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         address _market)         
     public
     view
-    returns (address[]) {
+    returns (address[] memory) {
         uint numberOfOutcomes = IMarket(_market).getNumberOfOutcomes();
 
         address[] memory shares = new address[](numberOfOutcomes);
         for (uint i = 0; i < numberOfOutcomes; i++) {
-            address token = IMarket(_market).getShareToken(i);
-            shares[i] = token;
+            IShareToken token = IMarket(_market).getShareToken(i);
+            shares[i] = address(token);
         }
 
         return shares;
@@ -273,7 +273,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
             require(weth.transfer(_receiver, _amountWETH.sub(usedWeth)), "AugurAdapter::buyShares: Unable transfer weth");
         }
         
-        emit AugurOracleTrade(Order.TradeDirections.Long, _share, usedWeth, boughtShares, _price);
+        emit AugurOracleTrade(Order.TradeDirections.Long, address(_share), usedWeth, boughtShares, _price);
 
         return (OK, usedWeth, boughtShares);
     }
@@ -325,7 +325,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
             require(weth.transfer(_receiver, boughtWeth), "AugurAdapter::sellShares: Unable transfer received WETH to sender");        
         }
         
-        emit AugurOracleTrade(Order.TradeDirections.Short, _share, boughtWeth, usedShares, _price);
+        emit AugurOracleTrade(Order.TradeDirections.Short, address(_share), boughtWeth, usedShares, _price);
 
         return (OK, usedShares, boughtWeth);
     }
@@ -344,7 +344,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
     ensureTokenBalanceUnchanged(weth)
     returns (uint result, uint used, uint bought) {         
         // 1st step: sell src shares token
-        (uint rate,) = calculateRate(_src, _srcAmount, address(weth), MAX_UINT, _loopLimit);
+        (uint rate,) = calculateRate(address(_src), _srcAmount, address(weth), MAX_UINT, _loopLimit);
 
         (result, , bought) = sellShares(
             _src, 
@@ -357,7 +357,7 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
         require(result == OK, "AugurAdapter::swapShares: Can't sell shares");
 
         // 2nd step: buy dest shares token
-        (rate,) = calculateRate(address(weth), bought, _dest, MAX_UINT, _loopLimit);
+        (rate,) = calculateRate(address(weth), bought, address(_dest), MAX_UINT, _loopLimit);
 
         (result, , bought) = buyShares(
             bought, 

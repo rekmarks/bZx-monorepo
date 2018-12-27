@@ -1,6 +1,6 @@
-pragma solidity 0.4.24;
+pragma solidity 0.5.2;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "../../openzeppelin-solidity/ERC20.sol";
 
 contract ITyped {
     function getTypeName() public view returns (bytes32);
@@ -165,7 +165,7 @@ contract IAugurNetworkAdapter {
         address _market)         
     public
     view
-    returns (address []);
+    returns (address[] memory);
 
     function isShareToken(address token) 
     public 

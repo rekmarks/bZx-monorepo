@@ -1,9 +1,9 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.5.2;
 
 
 /// @title Routing contract that is able to provide a way for delegating invocations with dynamic destination address.
 contract Router {
-    function() payable public {
+    function() payable external {
         address _backend = backend();
 
         assembly {
@@ -29,5 +29,5 @@ contract Router {
     /// @notice Returns destination address for future calls
     /// @dev abstract definition. should be implemented in sibling contracts
     /// @return destination address
-    function backend() internal constant returns (address);
+    function backend() internal view returns (address);
 }

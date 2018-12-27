@@ -1,7 +1,7 @@
-pragma solidity 0.4.24;
+pragma solidity 0.5.2;
 
 import "./Router.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../openzeppelin-solidity/Ownable.sol";
 
 contract AugurOracleProxy is Router, Ownable {   
     address private backendAddress;
