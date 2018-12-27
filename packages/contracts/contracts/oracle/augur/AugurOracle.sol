@@ -406,7 +406,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
             loanPosition.positionTokenAddressFilled,
             destTokenAddress,
             loanPosition.positionTokenAmountFilled,
-            0);
+            maxDestTokenAmount);
 
         if (ensureHealthy) {
             loanPosition.positionTokenAddressFilled = destTokenAddress;
