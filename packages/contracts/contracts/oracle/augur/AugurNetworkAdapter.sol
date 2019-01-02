@@ -196,21 +196,24 @@ contract AugurNetworkAdapter is IAugurNetworkAdapter {
     public
     view
     returns (bool result) {
-        if (_token == address(0x0)) {
-            return false;
-        }
+        // if (_token == address(0x0)) {
+        //     return false;
+        // }
         
-        bytes4 sig = 0xdb0a087c; //bytes4(keccak256("getTypeName()"));
-        bytes32 tokenType;
-        assembly {
-            let data := mload(0x40)
-            mstore(data, sig) 
+        // bytes4 sig = 0xdb0a087c; //bytes4(keccak256("getTypeName()"));
+        // bytes32 tokenType;
+        // assembly {
+        //     let data := mload(0x40)
+        //     mstore(data, sig) 
 
-            let result := staticcall(4999, _token, data, 0x08, data, 0x20)
-            tokenType := mload(data) 
-        }
+        //     let result := call(4999, _token, data, 0x08, data, 0x20)
+        //     tokenType := mload(data) 
+        // }
 
-        return tokenType == bytes32("ShareToken");
+        // return tokenType == bytes32("ShareToken");
+
+        // TODO: ahiatsevich: hotfix, just check that the given token is not weth
+        return _token!= address(weth);
     }
 
     function getTradeService()
