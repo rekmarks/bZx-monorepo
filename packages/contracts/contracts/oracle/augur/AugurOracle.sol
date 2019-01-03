@@ -515,7 +515,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
                 loanPosition.collateralTokenAddressFilled,
                 loanPosition.loanTokenAmountFilled,
                 loanPosition.positionTokenAmountFilled,
-                loanPosition.collateralTokenAmountFilled) <= loanOrder.maintenanceMarginAmount.mul(10**18)
+                loanPosition.collateralTokenAmountFilled) <= loanOrder.maintenanceMarginAmount
             );
     }
 
@@ -571,7 +571,7 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
                 : loanPosition.loanTokenAmountFilled.mul(loanSlippage).div(RATE_MULTIPLIER);
         }
 
-        uint initialPosition = loanToPositionAmount.add(loanToPositionAmount.mul(loanOrder.initialMarginAmount).div(100));
+        uint initialPosition = loanToPositionAmount.add(loanToPositionAmount.mul(loanOrder.initialMarginAmount.div(10**18)).div(100));
         uint currentPosition = loanPosition.positionTokenAmountFilled.add(collateralToPositionAmount);
         if (currentPosition > initialPosition) {
             isPositive = true;
