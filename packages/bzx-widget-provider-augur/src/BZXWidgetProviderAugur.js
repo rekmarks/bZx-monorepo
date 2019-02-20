@@ -974,8 +974,9 @@ export default class BZXWidgetProviderAugur {
 
     const marketId = this._getAugurMarkedId();
 
-    const sharesAmountToBorrow = value.qty;
+    const sharesAmountToBorrow = this.web3.utils.toWei(value.qty, "ether");
     console.log(`sharesAmountToBorrow: ${sharesAmountToBorrow}`);
+
     const sharesLendOrders = await this._findLendOrdersForCurrentMarket(
       marketId,
       value.asset.toLowerCase(),
