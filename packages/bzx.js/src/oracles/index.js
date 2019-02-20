@@ -134,11 +134,9 @@ export const getConversionData = async (
   const data = await oracleContract.methods
     .getTradeData(sourceTokenAddress, destTokenAddress, sourceTokenAmount)
     .call();
-  console.log(`conversion data return: `,data);
 
   return {
-    rate: 0 in data && data[0] ? data[0] : new BigNumber(0),
-    precision: 1 in data && data[1] ? data[1] : new BigNumber(0),
-    amount: 2 in data && data[2] ? data[2] : new BigNumber(0)
+    rate: 0 in data && data[0] ? new BigNumber(data[0]) : new BigNumber(0),
+    amount: 1 in data && data[1] ? new BigNumber(data[1]) : new BigNumber(0)
   };
 };

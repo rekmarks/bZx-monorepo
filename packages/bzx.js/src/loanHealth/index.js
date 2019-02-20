@@ -3,7 +3,7 @@ import { getContracts } from "../contracts";
 
 export const depositCollateral = (
   { web3, networkId, addresses },
-  { loanOrderHash, depositTokenAddress, depositAmount, getObject, txOpts }
+  { loanOrderHash, collateralTokenFilled, depositAmount, getObject, txOpts }
 ) => {
   const bZxContract = CoreUtils.getContractInstance(
     web3,
@@ -13,7 +13,7 @@ export const depositCollateral = (
 
   const txObj = bZxContract.methods.depositCollateral(
     loanOrderHash,
-    depositTokenAddress,
+    collateralTokenFilled,
     web3.utils.toBN(depositAmount).toString(10)
   );
 
@@ -25,7 +25,7 @@ export const depositCollateral = (
 
 export const withdrawCollateral = (
   { web3, networkId, addresses },
-  { loanOrderHash, withdrawAmount, getObject, txOpts }
+  { loanOrderHash, collateralTokenFilled, withdrawAmount, getObject, txOpts }
 ) => {
   const bZxContract = CoreUtils.getContractInstance(
     web3,
@@ -35,6 +35,7 @@ export const withdrawCollateral = (
 
   const txObj = bZxContract.methods.withdrawCollateral(
     loanOrderHash,
+    collateralTokenFilled,
     web3.utils.toBN(withdrawAmount).toString(10)
   );
 
@@ -124,15 +125,14 @@ export const getPositionOffset = async (
 
   return {
     isPositive: data.isPositive,
-    positionOffsetAmount: data.positionOffsetAmount,
-    loanOffsetAmount: data.loanOffsetAmount,
-   	collateralOffsetAmount: data.collateralOffsetAmount
+    offsetAmount: data.offsetAmount,
+    positionTokenAddress: data.positionTokenAddress
   };
 };
 
-export const payInterestForOrder = (
+export const payInterest = (
   { web3, networkId, addresses },
-  { loanOrderHash, getObject, txOpts }
+  { loanOrderHash, trader, getObject, txOpts }
 ) => {
   const bZxContract = CoreUtils.getContractInstance(
     web3,
@@ -140,7 +140,7 @@ export const payInterestForOrder = (
     addresses.BZx
   );
 
-  const txObj = bZxContract.methods.payInterestForOrder(loanOrderHash);
+  const txObj = bZxContract.methods.payInterest(loanOrderHash, trader);
 
   if (getObject) {
     return txObj;
@@ -148,67 +148,7 @@ export const payInterestForOrder = (
   return txObj.send(txOpts);
 };
 
-export const payInterestForOracle = (
-  { web3, networkId, addresses },
-  { oracleAddress, interestTokenAddress, getObject, txOpts }
-) => {
-  const bZxContract = CoreUtils.getContractInstance(
-    web3,
-    getContracts(networkId).BZx.abi,
-    addresses.BZx
-  );
-
-  const txObj = bZxContract.methods.payInterestForOrder(oracleAddress, interestTokenAddress);
-
-  if (getObject) {
-    return txObj;
-  }
-  return txObj.send(txOpts);
-};
-
-export const getLenderInterestForOracle = async (
-  { web3, networkId, addresses },
-  { lender, oracleAddress, interestTokenAddress }
-) => {
-  const bZxContract = CoreUtils.getContractInstance(
-    web3,
-    getContracts(networkId).BZx.abi,
-    addresses.BZx
-  );
-  const data = await bZxContract.methods
-    .getLenderInterestForToken(lender, oracleAddress, interestTokenAddress)
-    .call();
-  return {
-    interestPaid: data[0],
-    interestPaidDate: data[1],
-    interestOwedPerDay: data[2],
-    interestUnPaid: data[3]
-  };
-};
-
-export const getLenderInterestForOrder = async (
-  { web3, networkId, addresses },
-  { loanOrderHash }
-) => {
-  const bZxContract = CoreUtils.getContractInstance(
-    web3,
-    getContracts(networkId).BZx.abi,
-    addresses.BZx
-  );
-  const data = await bZxContract.methods
-    .getLenderInterestForOrder(loanOrderHash)
-    .call();
-  return {
-    lender: data[0],
-    interestTokenAddress: data[1],
-    interestPaid: data[2],
-    interestPaidDate: data[3],
-    interestOwedPerDay: data[4],
-    interestUnPaid: data[5]
-  };
-};
-
-export const getTraderInterestForLoan = async (
+export const getInterest = async (
   { web3, networkId, addresses },
   { loanOrderHash, trader }
 ) => {
@@ -218,14 +158,13 @@ export const getTraderInterestForLoan = async (
     addresses.BZx
   );
   const data = await bZxContract.methods
-    .getTraderInterestForLoan(loanOrderHash, trader)
+    .getInterest(loanOrderHash, trader)
     .call();
   return {
-    interestTokenAddress: data[0],
-    interestOwedPerDay: data[1],
-    interestPaidTotal: data[2],
-    interestDepositTotal: data[3],
-    interestDepositRemaining: data[4]
+    lender: data[0],
+    interestTokenAddress: data[1],
+    interestTotalAccrued: data[2],
+    interestPaidSoFar: data[3]
   };
 };
 

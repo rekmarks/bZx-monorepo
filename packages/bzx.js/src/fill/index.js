@@ -120,8 +120,7 @@ export const pushLoanOrderOnChain = (
   { web3, networkId },
   { order, oracleData, getObject, txOpts }
 ) => {
-  if (order.signature)
-    checkForValidSignature(order);
+  checkForValidSignature(order);
 
   const bZxContract = CoreUtils.getContractInstance(
     web3,
@@ -158,7 +157,7 @@ export const pushLoanOrderOnChain = (
     orderAddresses,
     orderValues,
     oracleData || "0x",
-    order.signature || "0x" // if maker is pushing order, no signature is needed
+    order.signature
   );
 
   if (getObject) {
@@ -221,7 +220,7 @@ export const cancelLoanOrder = (
   { web3, networkId },
   { order, oracleData, cancelLoanTokenAmount, getObject, txOpts }
 ) => {
-  //checkForValidSignature(order);
+  checkForValidSignature(order);
 
   const bZxContract = CoreUtils.getContractInstance(
     web3,
