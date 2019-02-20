@@ -12,8 +12,8 @@ BigNumber.config({ EXPONENTIAL_AT: 20 });
 
 export default class BZXWidgetProviderAugur {
   networkId = 4;
-  defaultGasAmount = 2000000;
-  defaultGasPrice = new BigNumber(12).times(10 ** 9).toString();
+  defaultGasAmount = 4000000;
+  defaultGasPrice = new BigNumber(12).times(1e9).toFixed();
   batchSize = 50;
 
   // from packages/bzx.js/src/contracts/rinkeby/WETH.json
@@ -259,10 +259,10 @@ export default class BZXWidgetProviderAugur {
     return tokenAddress.toLowerCase() === this.wethAddress.toLowerCase();
   };
 
-  doLoanOrderWithdrawProfit = async ({ loanOrderHash }) => {
+  doLoanOrderWithdrawProfit = async ({ loanOrderHash, withdrawAmount }) => {
     return new Promise((resolve, reject) => {
       try {
-        this._hanldeLoanOrderWithdrawProfit(loanOrderHash, resolve, reject);
+        this._handleLoanOrderWithdrawProfit(loanOrderHash, withdrawAmount, resolve, reject);
       } catch (e) {
         console.dir(e);
         reject("error happened while processing your request");
@@ -273,7 +273,7 @@ export default class BZXWidgetProviderAugur {
   doLoanOrderCancel = async ({ loanOrderHash, amount }) => {
     return new Promise((resolve, reject) => {
       try {
-        this._hanldeLoanOrderCancel(loanOrderHash, amount, resolve, reject);
+        this._handleLoanOrderCancel(loanOrderHash, amount, resolve, reject);
       } catch (e) {
         console.dir(e);
         reject("error happened while processing your request");
@@ -284,7 +284,7 @@ export default class BZXWidgetProviderAugur {
   doLoanClose = async ({ loanOrderHash }) => {
     return new Promise((resolve, reject) => {
       try {
-        this._hanldeLoanClose(loanOrderHash, resolve, reject);
+        this._handleLoanClose(loanOrderHash, resolve, reject);
       } catch (e) {
         console.dir(e);
         reject("error happened while processing your request");
@@ -295,7 +295,7 @@ export default class BZXWidgetProviderAugur {
   doLoanOrderTake = async ({ loanOrderHash, loanTokenAddress, collateralTokenAddress, amount, isAsk }) => {
     return new Promise((resolve, reject) => {
       try {
-        this._hanldeLoanOrderTake(
+        this._handleLoanOrderTake(
           loanOrderHash,
           loanTokenAddress,
           collateralTokenAddress,
@@ -412,7 +412,23 @@ export default class BZXWidgetProviderAugur {
         _outcome: this.augur.utils.convertBigNumberToHexString(new BigNumber(e.id)),
         tx: { to: augurMarketId }
       });
-      const shareTokenText = `${e.description} / volume: ${e.volume} / address: ${shareTokenAddress}`;
+
+      let outcomeName = "";
+      let outcomePrice = new BigNumber(e.price).toFormat(2);
+      let outcomeMinPrice = new BigNumber(result[0].minPrice).toFormat(2);
+      let outcomeMaxPrice = new BigNumber(result[0].maxPrice).toFormat(2);
+      if (result[0].marketType === "scalar") {
+        outcomeName =
+          `${e.id === 0 ? "LOW: " : "HIGH: "}${outcomeMinPrice} / ${outcomePrice} / ${outcomeMaxPrice}`;
+      } else if (result[0].marketType === "categorical") {
+        outcomeName = `${e.description}: ${outcomePrice}`;
+      } else if (result[0].marketType === "yesNo") {
+        outcomeName = `${e.id === 0 ? "NO: " : "YES: "}${outcomePrice}`;
+      } else {
+        outcomeName = "unknown market type";
+      }
+
+      const shareTokenText = `${outcomeName} // volume: ${e.volume} // address: ${shareTokenAddress}`;
 
       return { num: e.id, id: shareTokenAddress, text: shareTokenText };
     });
@@ -447,18 +463,6 @@ export default class BZXWidgetProviderAugur {
     this.eventEmitter.emit(EVENT_ASSET_UPDATE, this.assets, this.defaultAsset);
   };
 
-  _preValidateLendOrderApprove = value => {
-    if (!value.asset) {
-      return { isValid: false, message: "asset is not selected" };
-    }
-
-    if (!value.pushOnChain) {
-      return { isValid: false, message: "pushing to relay is not yet supported" };
-    }
-
-    return { isValid: true, message: "" };
-  };
-
   _getSingleOrder = async (loanOrderHash, resolve, reject) => {
     try {
       const result = await this.bzxjs.getSingleOrder({ loanOrderHash: loanOrderHash.toLowerCase() });
@@ -470,10 +474,11 @@ export default class BZXWidgetProviderAugur {
     }
   };
 
-  _hanldeLoanOrderWithdrawProfit = async (loanOrderHash, resolve, reject) => {
+  _handleLoanOrderWithdrawProfit = async (loanOrderHash, withdrawAmount, resolve, reject) => {
     try {
-      let transactionReceipt = await this.bzxjs.withdrawProfit({
+      let transactionReceipt = await this.bzxjs.withdrawPosition({
         loanOrderHash: loanOrderHash.toLowerCase(),
+        withdrawAmount: withdrawAmount.toFixed(),
         getObject: false,
         txOpts: { from: this.account.toLowerCase(), gasPrice: this.defaultGasPrice, gas: this.defaultGasAmount }
       });
@@ -487,7 +492,7 @@ export default class BZXWidgetProviderAugur {
     }
   };
 
-  _hanldeLoanOrderCancel = async (loanOrderHash, amount, resolve, reject) => {
+  _handleLoanOrderCancel = async (loanOrderHash, amount, resolve, reject) => {
     try {
       let transactionReceipt = await this.bzxjs.cancelLoanOrderWithHash({
         loanOrderHash: loanOrderHash.toLowerCase(),
@@ -505,7 +510,7 @@ export default class BZXWidgetProviderAugur {
     }
   };
 
-  _hanldeLoanClose = async (loanOrderHash, resolve, reject) => {
+  _handleLoanClose = async (loanOrderHash, resolve, reject) => {
     try {
       let transactionReceipt = await this.bzxjs.closeLoan({
         loanOrderHash: loanOrderHash.toLowerCase(),
@@ -521,7 +526,7 @@ export default class BZXWidgetProviderAugur {
     }
   };
 
-  _hanldeLoanOrderTake = async (
+  _handleLoanOrderTake = async (
     loanOrderHash,
     loanTokenAddress,
     collateralTokenAddress,
@@ -585,6 +590,18 @@ export default class BZXWidgetProviderAugur {
     }
   };
 
+  _preValidateLendOrderApprove = value => {
+    if (!value.asset) {
+      return { isValid: false, message: "asset is not selected" };
+    }
+
+    if (!value.pushOnChain) {
+      return { isValid: false, message: "pushing to relay is not yet supported" };
+    }
+
+    return { isValid: true, message: "" };
+  };
+
   _handleLendOrderApprove = async (value, resolve, reject) => {
     // The user creates bzx order to lend current market tokens he already owns.
 
@@ -600,43 +617,42 @@ export default class BZXWidgetProviderAugur {
 
       let transactionReceipt;
 
-      // FOR SHARES THIS QTY SHOULD BE W/O DENOMINATION, BUT FOR WETH IT SHOULD BE IN WEI
-      const loanAmountInBaseUnits =
-        value.asset === this.wethAddress ? this.web3.utils.toWei(value.qty, "ether") : value.qty;
-      // CALCULATING MARGIN AMOUNT FROM "RATIO" (100 / RATIO)
-      // .integerValue(BigNumber.ROUND_CEIL); required for future conversion with bn.js (fractional part is not supported)
-      const initialMarginAmount = new BigNumber(100)
-        .dividedBy(value.ratio)
-        .integerValue(BigNumber.ROUND_CEIL)
-        .multipliedBy(1000000000000000000);
-      const maintenanceMarginAmount = initialMarginAmount.dividedBy(2).integerValue(BigNumber.ROUND_CEIL);
       const orderOracleAddress = this.bzxAugurOracleAddress.toLowerCase();
       // const orderOracleAddress = this.bZxOracleAddress.toLowerCase();
       const orderOracleData = this._getAugurMarkedId();
       // const orderOracleData = "0x";
-      const conversionRate =
+
+      // SHOULD BE WITH DENOMINATION
+      const loanAmountInBaseUnits = new BigNumber(this.web3.utils.toWei(value.qty, "ether"));
+      const convertedToWeiAmount =
         value.asset === this.wethAddress
-          ? new BigNumber(1)
-          : new BigNumber(
-              (await this.bzxjs.getConversionData(
-                value.asset.toLowerCase(),
-                this.wethAddress.toLowerCase(),
-                loanAmountInBaseUnits,
-                orderOracleAddress
-              )).rate
-            );
-      console.log(`conversionRate: ${conversionRate}`);
-      if (conversionRate.eq(0)) {
-        throw "Not enough liquidity";
+          ? loanAmountInBaseUnits
+          : this._convertWithConversionData(
+            loanAmountInBaseUnits,
+            await this.bzxjs.getConversionData(
+              value.asset.toLowerCase(),
+              this.wethAddress.toLowerCase(),
+              loanAmountInBaseUnits.toFixed(),
+              orderOracleAddress
+            )
+          );
+      if (convertedToWeiAmount.eq(0) || convertedToWeiAmount.isNaN()) {
+        reject("not enough liquidity");
+        return;
       }
 
+      // CALCULATING MARGIN AMOUNT FROM "RATIO" (100 / RATIO)
+      // .integerValue(BigNumber.ROUND_CEIL); required for future conversion with bn.js (fractional part is not supported)
+      const initialMarginAmount = convertedToWeiAmount.dividedBy(value.ratio).integerValue(BigNumber.ROUND_CEIL);
+      const maintenanceMarginAmount = initialMarginAmount.dividedBy(2).integerValue(BigNumber.ROUND_CEIL);
+
       // CALCULATING INTEREST AS % FROM LOAN
-      const interestAmount = new BigNumber(loanAmountInBaseUnits)
-        .multipliedBy(conversionRate)
+      const interestAmount = convertedToWeiAmount
         .multipliedBy(new BigNumber(value.interestRate))
         .dividedBy(value.duration)
-        .dividedBy(100);
-      console.log(`interestAmount: ${interestAmount}`);
+        .dividedBy(100)
+        .integerValue(BigNumber.ROUND_CEIL);
+      console.log(`interestAmount: ${interestAmount.toFixed()}`);
 
       console.log("setting allowance for share's token");
       transactionReceipt = await this.bzxjs.setAllowanceUnlimited({
@@ -660,10 +676,10 @@ export default class BZXWidgetProviderAugur {
         collateralTokenAddress: zeroAddress.toLowerCase(),
         feeRecipientAddress: zeroAddress.toLowerCase(),
         oracleAddress: orderOracleAddress.toLowerCase(),
-        loanTokenAmount: loanAmountInBaseUnits.toString(),
-        interestAmount: interestAmount.toString(),
-        initialMarginAmount: initialMarginAmount.toString(),
-        maintenanceMarginAmount: maintenanceMarginAmount.toString(),
+        loanTokenAmount: loanAmountInBaseUnits.toFixed(),
+        interestAmount: interestAmount.toFixed(),
+        initialMarginAmount: initialMarginAmount.toFixed(),
+        maintenanceMarginAmount: maintenanceMarginAmount.toFixed(),
         // USING CONSTANTS BELOW
         lenderRelayFee: "0",
         traderRelayFee: "0",
@@ -740,43 +756,42 @@ export default class BZXWidgetProviderAugur {
 
       let transactionReceipt;
 
-      // FOR SHARES THIS QTY SHOULD BE W/O DENOMINATION, BUT FOR WETH IT SHOULD BE IN WEI
-      const borrowAmountInBaseUnits =
-        value.asset === this.wethAddress ? this.web3.utils.toWei(value.qty, "ether") : value.qty;
-      // CALCULATING MARGIN AMOUNT FROM "RATIO" (100 / RATIO)
-      // .integerValue(BigNumber.ROUND_CEIL); required for future conversion with bn.js (fractional part is not supported)
-      const initialMarginAmount = new BigNumber(100)
-        .dividedBy(value.ratio)
-        .integerValue(BigNumber.ROUND_CEIL)
-        .multipliedBy(1000000000000000000);
-      const maintenanceMarginAmount = initialMarginAmount.dividedBy(2).integerValue(BigNumber.ROUND_CEIL);
       const orderOracleAddress = this.bzxAugurOracleAddress.toLowerCase();
       // const orderOracleAddress = this.bZxOracleAddress.toLowerCase();
       const orderOracleData = this._getAugurMarkedId();
       // const orderOracleData = "0x";
-      const conversionRate =
+
+      // SHOULD BE WITH DENOMINATION
+      const borrowAmountInBaseUnits = new BigNumber(this.web3.utils.toWei(value.qty, "ether"));
+      const convertedToWeiAmount =
         value.asset === this.wethAddress
-          ? new BigNumber(1)
-          : new BigNumber(
-              (await this.bzxjs.getConversionData(
-                value.asset.toLowerCase(),
-                this.wethAddress.toLowerCase(),
-                borrowAmountInBaseUnits,
-                orderOracleAddress
-              )).rate
-            );
-      console.log(`conversionRate: ${conversionRate}`);
-      if (conversionRate.eq(0)) {
-        throw "Not enough liquidity";
+          ? borrowAmountInBaseUnits
+          : this._convertWithConversionData(
+            borrowAmountInBaseUnits,
+            await this.bzxjs.getConversionData(
+              value.asset.toLowerCase(),
+              this.wethAddress.toLowerCase(),
+              borrowAmountInBaseUnits.toFixed(),
+              orderOracleAddress
+            )
+      );
+      if (convertedToWeiAmount.eq(0) || convertedToWeiAmount.isNaN()) {
+        reject("not enough liquidity");
+        return;
       }
 
+      // CALCULATING MARGIN AMOUNT FROM "RATIO" (100 / RATIO)
+      // .integerValue(BigNumber.ROUND_CEIL); required for future conversion with bn.js (fractional part is not supported)
+      const initialMarginAmount = convertedToWeiAmount.dividedBy(value.ratio).integerValue(BigNumber.ROUND_CEIL);
+      const maintenanceMarginAmount = initialMarginAmount.dividedBy(2).integerValue(BigNumber.ROUND_CEIL);
+
       // CALCULATING INTEREST AS % FROM LOAN
-      const interestAmount = new BigNumber(borrowAmountInBaseUnits)
-        .multipliedBy(conversionRate)
+      const interestAmount = convertedToWeiAmount
         .multipliedBy(new BigNumber(value.interestRate))
         .dividedBy(value.duration)
-        .dividedBy(100);
-      console.log(`interestAmount: ${interestAmount}`);
+        .dividedBy(100)
+        .integerValue(BigNumber.ROUND_CEIL);
+      console.log(`interestAmount: ${interestAmount.toFixed()}`);
 
       console.log("setting allowance for collateral token (weth)");
       transactionReceipt = await this.bzxjs.setAllowanceUnlimited({
@@ -800,11 +815,11 @@ export default class BZXWidgetProviderAugur {
         collateralTokenAddress: this.wethAddress.toLowerCase(),
         feeRecipientAddress: zeroAddress.toLowerCase(),
         oracleAddress: orderOracleAddress.toLowerCase(),
-        loanTokenAmount: borrowAmountInBaseUnits.toString(),
-        interestAmount: interestAmount.toString(),
-        initialMarginAmount: initialMarginAmount.toString(),
+        loanTokenAmount: borrowAmountInBaseUnits.toFixed(),
+        interestAmount: interestAmount.toFixed(),
+        initialMarginAmount: initialMarginAmount.toFixed(),
+        maintenanceMarginAmount: maintenanceMarginAmount.toFixed(),
         // USING CONSTANTS BELOW
-        maintenanceMarginAmount: maintenanceMarginAmount.toString(),
         lenderRelayFee: "0",
         traderRelayFee: "0",
         // EXPECTING DURATION IN DAYS
@@ -851,6 +866,24 @@ export default class BZXWidgetProviderAugur {
       reject("error happened while processing your request");
       return;
     }
+  };
+
+  _convertWithConversionData = (value, conv) => {
+    // let result = value.multipliedBy(new BigNumber(conv.rate));
+    //
+    // const precision = new BigNumber(conv.precision);
+    // if (!precision.isZero()) {
+    //   result = result.dividedBy(precision);
+    // }
+    //
+    // return result;
+    let rate = (new BigNumber(conv.rate)).dividedBy(1e18);
+    let result = value.multipliedBy(rate);
+
+    console.log(`rate: ${rate.toFixed()}`);
+    console.log(`result: ${result.toFixed()}`);
+
+    return result;
   };
 
   _preValidateQuickPositionApprove = value => {
@@ -900,16 +933,32 @@ export default class BZXWidgetProviderAugur {
     // - take ETH lend order
     // - buy tokens at augur market using bzx
 
-    const marketId = this._getAugurMarkedId();
+    if (value.ratio === 1) {
+      reject("unable to open long position with 1x leverage (your margin will be equal to leveraged funds)");
+      return;
+    }
 
+    const marketId = this._getAugurMarkedId();
+    console.log(`marketId: ${marketId}`);
+
+    console.log("looking for augur orders");
     const sellOrders = await this._findAugurLowestAskSellOrders(marketId, value.asset.toLowerCase(), value.qty);
+    if (sellOrders.length === 0) {
+      reject("not enough liquidity (augur outcome)");
+      return;
+    }
 
     const ethAmountToBorrow = await this._getEthAmountToBorrow(sellOrders, value.qty);
-    const weiAmountToBorrow = this.web3.utils.toWei(ethAmountToBorrow.toString(), "ether").toString();
+    console.log(`ethAmountToBorrow: ${ethAmountToBorrow}`);
+    const weiAmountToBorrow = this.web3.utils.toWei(ethAmountToBorrow.toFixed(), "ether").toString();
     console.log(`weiAmountToBorrow: ${weiAmountToBorrow}`);
 
+    console.log("looking for bzx orders");
     const ethLendOrders = await this._findLendOrdersForCurrentMarket(marketId, this.wethAddress, weiAmountToBorrow);
-    console.log(`ethLendOrders: ${ethLendOrders}`);
+    if (ethLendOrders.length === 0) {
+      reject("not enough liquidity (bzx lend orders)");
+      return;
+    }
 
     await this._takeLendOrders(ethLendOrders, weiAmountToBorrow);
     await this._takeAugurOrdersWithBzx(ethLendOrders, value.asset);
@@ -932,6 +981,10 @@ export default class BZXWidgetProviderAugur {
       value.asset.toLowerCase(),
       sharesAmountToBorrow
     );
+    if (sharesLendOrders.length === 0) {
+      reject("not enough liquidity (bzx lend orders)");
+      return;
+    }
 
     await this._takeLendOrders(sharesLendOrders, sharesAmountToBorrow);
     await this._takeAugurOrdersWithBzx(sharesLendOrders, this.wethAddress);
@@ -958,6 +1011,8 @@ export default class BZXWidgetProviderAugur {
 
   _findAugurLowestAskSellOrders = async (marketId, marketShareTokenAddress, amount) => {
     const outcomeNumber = await this._getAugurMarketShareOutcomeNumber(marketId, marketShareTokenAddress);
+    console.log(`outcomeNumber: ${outcomeNumber}`);
+
     const augurOrdersPromise = new Promise((resolve, reject) => {
       this.augur.trading.getOrders(
         {
@@ -980,14 +1035,21 @@ export default class BZXWidgetProviderAugur {
     });
 
     const singleSideOrderBook = await augurOrdersPromise;
+    if (!(marketId.toString().toLowerCase() in singleSideOrderBook)) {
+      // not enough liquidity
+      return [];
+    }
     const orders = singleSideOrderBook[marketId.toString().toLowerCase()];
+    console.dir(orders);
 
     let amountToTake = new BigNumber(amount);
+    console.log(`amountToTake: ${amountToTake.toFixed()}`);
+
     const ordersArray = [];
     for (let num in orders) {
       const orderKeyValueObject = orders[num]["sell"];
       for (let id in orderKeyValueObject) {
-        let amountShouldBeTaken = BigNumber.minimum(new BigNumber(orderKeyValueObject[id].amount), amountToTake);
+        let amountShouldBeTaken = BigNumber.minimum(new BigNumber(orderKeyValueObject[id].fullPrecisionAmount), amountToTake);
         if (amountShouldBeTaken.eq(0)) {
           break;
         }
@@ -996,7 +1058,12 @@ export default class BZXWidgetProviderAugur {
         ordersArray.push(orderKeyValueObject[id]);
       }
     }
+    if (!amountToTake.eq(0)) {
+      // not enough liquidity
+      return [];
+    }
 
+    console.log("ordersArray");
     console.dir(ordersArray);
 
     return ordersArray;
@@ -1006,7 +1073,7 @@ export default class BZXWidgetProviderAugur {
     let amountToTake = new BigNumber(amount);
     let amountToBorrow = new BigNumber(0);
     for (let e of sellOrders) {
-      let amountShouldBeTaken = BigNumber.minimum(new BigNumber(e.amount), amountToTake);
+      let amountShouldBeTaken = BigNumber.minimum(new BigNumber(e.fullPrecisionAmount), amountToTake);
       if (amountShouldBeTaken.eq(0)) {
         break;
       }
@@ -1051,7 +1118,26 @@ export default class BZXWidgetProviderAugur {
     });
     console.dir(fullLendOrdersList);
 
-    return fullLendOrdersList;
+    let amountToTake = new BigNumber(amount);
+    console.log(`amountToTake: ${amountToTake.toFixed()}`);
+    let filteredLendOrdersList = [];
+    for (let lendOrder of fullLendOrdersList) {
+      let amountShouldBeTaken = BigNumber.minimum(new BigNumber(lendOrder.loanTokenAmount), amountToTake);
+      if (amountShouldBeTaken.eq(0)) {
+        break;
+      }
+
+      amountToTake = amountToTake.minus(amountShouldBeTaken);
+      filteredLendOrdersList.push(lendOrder);
+    }
+    if (!amountToTake.eq(0)) {
+      // not enough liquidity
+      return [];
+    }
+
+    console.dir(filteredLendOrdersList);
+
+    return filteredLendOrdersList;
   };
 
   _takeLendOrders = async (orders, amount) => {
@@ -1066,7 +1152,7 @@ export default class BZXWidgetProviderAugur {
       let transactionReceipt = await this.bzxjs.takeLoanOrderOnChainAsTrader({
         loanOrderHash: e.loanOrderHash.toLowerCase(),
         collateralTokenAddress: this.wethAddress.toLowerCase(),
-        loanTokenAmountFilled: amountShouldBeTaken.toString(),
+        loanTokenAmountFilled: amountShouldBeTaken.toFixed(),
         tradeTokenToFillAddress: zeroAddress.toLowerCase(),
         withdrawOnOpen: "0",
         getObject: false,
@@ -1081,6 +1167,7 @@ export default class BZXWidgetProviderAugur {
   _takeAugurOrdersWithBzx = async (orders, tokenAddress) => {
     for (let e of orders) {
       console.log(`Trading augur position with bzx order ${e.loanOrderHash}`);
+      console.log(tokenAddress);
       await this.bzxjs.tradePositionWithOracle({
         orderHash: e.loanOrderHash.toLowerCase(),
         tradeTokenAddress: tokenAddress.toLowerCase(),

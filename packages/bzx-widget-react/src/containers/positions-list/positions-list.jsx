@@ -84,10 +84,10 @@ export default class PositionsList extends Component {
         <CardPosition
           key={e.loanOrderHash}
           data={e}
-          onLoanOrderWithdrawProfit={this.props.onLoanOrderWithdrawProfit}
-          onLoanOrderCancel={this.props.onLoanOrderCancel}
-          onLoanClose={this.props.onLoanClose}
-          onLoanTradeWithCurrentAsset={this.props.onLoanTradeWithCurrentAsset}
+          onLoanOrderWithdrawProfit={this._handleLoanOrderWithdrawProfitClicked}
+          onLoanOrderCancel={this._handleLoanOrderCancelClicked}
+          onLoanClose={this._handleLoanCloseClicked}
+          onLoanTradeWithCurrentAsset={this._handleLoanTradeWithCurrentAssetClicked}
           getTokenNameFromAddress={this.props.getTokenNameFromAddress}
           getMarginLevels={this.props.getMarginLevels}
           getPositionOffset={this.props.getPositionOffset}
@@ -98,6 +98,30 @@ export default class PositionsList extends Component {
         />
       ));
   }
+
+  _handleLoanOrderWithdrawProfitClicked = request => {
+    return this.props.onLoanOrderWithdrawProfit(request).then(result => {
+      this._handleReload();
+    });
+  };
+
+  _handleLoanOrderCancelClicked = request => {
+    return this.props.onLoanOrderCancel(request).then(result => {
+      this._handleReload();
+    });
+  };
+
+  _handleLoanCloseClicked = request => {
+    return this.props.onLoanClose(request).then(result => {
+      this._handleReload();
+    });
+  };
+
+  _handleLoanTradeWithCurrentAssetClicked = request => {
+    return this.props.onLoanTradeWithCurrentAsset(request).then(result => {
+      this._handleReload();
+    });
+  };
 
   _handlePageChange = value => {
     this.setState({ ...this.state, currentPage: value });

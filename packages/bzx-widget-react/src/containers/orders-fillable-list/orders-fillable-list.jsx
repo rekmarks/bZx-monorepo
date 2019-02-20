@@ -65,6 +65,7 @@ export default class OrdersFillableList extends Component {
         <CardOrderFillableTitle />
         <Scrollbar noScrollX style={{ minHeight: 250, maxHeight: 400 }}>
           {this.renderLendOrdersList(this.state.bids, false, this._handleLoanOrderTake, this._handleLoanOrderCancel)}
+          <hr/>
           {this.renderLendOrdersList(this.state.asks, true, this._handleLoanOrderTake, this._handleLoanOrderCancel)}
         </Scrollbar>
       </div>

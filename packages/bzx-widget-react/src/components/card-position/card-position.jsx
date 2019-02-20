@@ -70,6 +70,14 @@ export default class CardPosition extends Component {
     this.props.getMarginLevels(this.props.data.loanOrderHash).then(result => {
       this.setState({ ...this.state, marginLevel: result });
     });
+
+    this.setState({
+      ...this.state,
+      actionTradeWithCurrentAssetEnabled:
+        this.props.isWethToken(this.props.currentAsset.toLowerCase()) !==
+        this.props.isWethToken(this.props.data.loanTokenAddress.toLowerCase()) &&
+        this.props.data.trader.toLowerCase() === this.props.currentAccount.toLowerCase()
+    });
   }
 
   componentWillReceiveProps(nextProps, nextContext) {
@@ -107,22 +115,24 @@ export default class CardPosition extends Component {
           {this.props.data.loanTokenAddress})
         </div>
         <div style={this.ellipsisStyle}>
-          <span style={this.paramHeaderStyle}>Amount (avail. / full):</span>{" "}
+          <span style={this.paramHeaderStyle}>Amount (filled / cancel. / full):</span>{" "}
           {this.state.fullOrder
-            ? new BigNumber(this.state.fullOrder.loanTokenAmount)
-                .minus(new BigNumber(this.props.data.loanTokenAmountFilled))
-                .minus(new BigNumber(this.state.fullOrder.orderCancelledAmount))
-                .dividedBy(1000000000000000000)
-                .toFixed(4)
+            ? new BigNumber(this.props.data.loanTokenAmountFilled)
+              .dividedBy(1e18)
+              .toFixed(4)
             : "?"}
           {" / "}
           {this.state.fullOrder
-            ? new BigNumber(this.state.fullOrder.loanTokenAmount).dividedBy(1000000000000000000).toFixed(4)
+            ? new BigNumber(this.state.fullOrder.orderCancelledAmount)
+                .dividedBy(1e18)
+                .toFixed(4)
             : "?"}
+          {" / "}
+          {this.state.fullOrder ? new BigNumber(this.state.fullOrder.loanTokenAmount).dividedBy(1e18).toFixed(4) : "?"}
         </div>
         <div style={this.ellipsisStyle}>
           <span style={this.paramHeaderStyle}>Interest accrued:</span>{" "}
-          {new BigNumber(this.props.data.interestTotalAccrued).dividedBy(1000000000000000000).toFixed(4)}{" "}
+          {new BigNumber(this.props.data.interestTotalAccrued).dividedBy(1e18).toFixed(4)}{" "}
           {this.props.getTokenNameFromAddress(this.props.data.interestTokenAddress.toLowerCase())}
         </div>
         <div style={this.ellipsisStyle}>{this.renderMarginLevels()}</div>
@@ -153,13 +163,11 @@ export default class CardPosition extends Component {
             ? new BigNumber(this.state.fullOrder.loanTokenAmount)
                 .minus(new BigNumber(this.props.data.loanTokenAmountFilled))
                 .minus(new BigNumber(this.state.fullOrder.orderCancelledAmount))
-                .dividedBy(1000000000000000000)
+                .dividedBy(1e18)
                 .toFixed(4)
             : "?"}
           {" / "}
-          {this.state.fullOrder
-            ? new BigNumber(this.state.fullOrder.loanTokenAmount).dividedBy(1000000000000000000).toFixed(4)
-            : "?"}
+          {this.state.fullOrder ? new BigNumber(this.state.fullOrder.loanTokenAmount).dividedBy(1e18).toFixed(4) : "?"}
         </div>
         {this.renderProfitOrLoss()}
         <div style={this.ellipsisStyle}>{this.renderMarginLevels()}</div>
@@ -181,13 +189,13 @@ export default class CardPosition extends Component {
         <span>
           <span style={this.paramHeaderStyle}>Profit: </span>
           <Icon type="up-circle" theme="twoTone" twoToneColor="#52c41a" />{" "}
-          {new BigNumber(this.state.profitStatus.offsetAmount).dividedBy(1000000000000000000).toFixed(4)} WETH
+          {new BigNumber(this.state.profitStatus.offsetAmount).dividedBy(1e18).toFixed(4)} WETH
         </span>
       ) : (
         <span>
           <span style={this.paramHeaderStyle}>Loss: </span>
           <Icon type="down-circle" theme="twoTone" twoToneColor="#eb2f96" />{" "}
-          {new BigNumber(this.state.profitStatus.offsetAmount).dividedBy(1000000000000000000).toFixed(4)} WETH
+          {new BigNumber(this.state.profitStatus.offsetAmount).dividedBy(1e18).toFixed(4)} WETH
         </span>
       )
     ) : (
@@ -203,11 +211,9 @@ export default class CardPosition extends Component {
       <span>
         <span style={this.paramHeaderStyle}>Margin Levels (init / maint. / current): </span>
         {this.state.marginLevel
-          ? `${new BigNumber(this.state.marginLevel.initialMarginAmount).dividedBy(
-              1000000000000000000
-            )} / ${new BigNumber(this.state.marginLevel.maintenanceMarginAmount).dividedBy(
-              1000000000000000000
-            )} / ${new BigNumber(this.state.marginLevel.currentMarginAmount).dividedBy(1000000000000000000)}`
+          ? `${new BigNumber(this.state.marginLevel.initialMarginAmount).dividedBy(1e18)} / ${new BigNumber(
+              this.state.marginLevel.maintenanceMarginAmount
+            ).dividedBy(1e18)} / ${new BigNumber(this.state.marginLevel.currentMarginAmount).dividedBy(1e18)}`
           : ""}
       </span>
     );
@@ -262,8 +268,15 @@ export default class CardPosition extends Component {
   }
 
   _handleLoanOrderWithdrawProfitClicked = () => {
+    let withdrawAmount = new BigNumber(this.state.profitStatus.offsetAmount);
+    if (!this.state.profitStatus.isPositive || withdrawAmount.lte(0)) {
+      message.error("There is still no profit!");
+      return;
+    }
+
     let resultPromise = this.props.onLoanOrderWithdrawProfit({
-      loanOrderHash: this.props.data.loanOrderHash.toLowerCase()
+      loanOrderHash: this.props.data.loanOrderHash.toLowerCase(),
+      withdrawAmount: withdrawAmount
     });
     resultPromise.then(
       value => message.success(`Withdraw profit operation was successful! TX: ${value}`),

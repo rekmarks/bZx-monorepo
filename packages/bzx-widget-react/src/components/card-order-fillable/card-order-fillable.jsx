@@ -77,7 +77,7 @@ export default class CardOrderFillable extends Component {
   }
 
   renderColumnInterest() {
-    return new BigNumber(this.props.data.interestAmount).dividedBy(1000000000000000000).toFixed(4);
+    return new BigNumber(this.props.data.interestAmount).dividedBy(1e18).toFixed(4);
   }
 
   renderColumnAmount() {
@@ -85,7 +85,7 @@ export default class CardOrderFillable extends Component {
       .minus(this.props.data.orderFilledAmount)
       .minus(this.props.data.orderCancelledAmount);
 
-    return amountInOrder.dividedBy(1000000000000000000).toFixed(4);
+    return amountInOrder.dividedBy(1e18).toFixed(4);
   }
 
   renderColumnExpDate() {
