@@ -407,7 +407,9 @@ export default class BZXWidgetProviderAugur {
     const result = await getMarketsPromise;
 
     // getting shares tokens list
-    const outcomesMap = result[0].outcomes.map(async e => {
+    const outcomesMap = result[0].outcomes
+      .filter(e => !(e.id === 0 && result[0].marketType === "scalar"))
+      .map(async e => {
       const shareTokenAddress = await this.augur.api.Market.getShareToken({
         _outcome: this.augur.utils.convertBigNumberToHexString(new BigNumber(e.id)),
         tx: { to: augurMarketId }
@@ -418,8 +420,7 @@ export default class BZXWidgetProviderAugur {
       let outcomeMinPrice = new BigNumber(result[0].minPrice).toFormat(2);
       let outcomeMaxPrice = new BigNumber(result[0].maxPrice).toFormat(2);
       if (result[0].marketType === "scalar") {
-        outcomeName =
-          `${e.id === 0 ? "LOW: " : "HIGH: "}${outcomeMinPrice} / ${outcomePrice} / ${outcomeMaxPrice}`;
+        outcomeName = `${outcomeMinPrice} / ${outcomePrice} / ${outcomeMaxPrice}`;
       } else if (result[0].marketType === "categorical") {
         outcomeName = `${e.description}: ${outcomePrice}`;
       } else if (result[0].marketType === "yesNo") {
@@ -878,7 +879,7 @@ export default class BZXWidgetProviderAugur {
     //
     // return result;
     let rate = (new BigNumber(conv.rate)).dividedBy(1e18);
-    let result = value.multipliedBy(rate);
+    let result = value.dividedBy(rate);
 
     console.log(`rate: ${rate.toFixed()}`);
     console.log(`result: ${result.toFixed()}`);
@@ -1079,8 +1080,11 @@ export default class BZXWidgetProviderAugur {
         break;
       }
 
+      const tokenPrice = new BigNumber(await this.augur.api.Orders.getPrice({_orderId: e.orderId}));
+      console.log(`tokenPrice: ${tokenPrice}`);
+
       amountToTake = amountToTake.minus(amountShouldBeTaken);
-      amountToBorrow = amountToBorrow.plus(amountShouldBeTaken.multipliedBy(new BigNumber(e.price)));
+      amountToBorrow = amountToBorrow.plus(amountShouldBeTaken.dividedBy(tokenPrice));
     }
 
     return amountToBorrow;
