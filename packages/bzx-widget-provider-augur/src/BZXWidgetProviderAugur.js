@@ -644,8 +644,8 @@ export default class BZXWidgetProviderAugur {
 
       // CALCULATING MARGIN AMOUNT FROM "RATIO" (100 / RATIO)
       // .integerValue(BigNumber.ROUND_CEIL); required for future conversion with bn.js (fractional part is not supported)
-      const initialMarginAmount = convertedToWeiAmount.dividedBy(value.ratio).integerValue(BigNumber.ROUND_CEIL);
-      const maintenanceMarginAmount = initialMarginAmount.dividedBy(2).integerValue(BigNumber.ROUND_CEIL);
+      const initialMarginAmount = "50000000000000000000";
+      const maintenanceMarginAmount = "25000000000000000000";
 
       // CALCULATING INTEREST AS % FROM LOAN
       const interestAmount = convertedToWeiAmount
@@ -783,8 +783,8 @@ export default class BZXWidgetProviderAugur {
 
       // CALCULATING MARGIN AMOUNT FROM "RATIO" (100 / RATIO)
       // .integerValue(BigNumber.ROUND_CEIL); required for future conversion with bn.js (fractional part is not supported)
-      const initialMarginAmount = convertedToWeiAmount.dividedBy(value.ratio).integerValue(BigNumber.ROUND_CEIL);
-      const maintenanceMarginAmount = initialMarginAmount.dividedBy(2).integerValue(BigNumber.ROUND_CEIL);
+      const initialMarginAmount = "50000000000000000000";
+      const maintenanceMarginAmount = "25000000000000000000";
 
       // CALCULATING INTEREST AS % FROM LOAN
       const interestAmount = convertedToWeiAmount
@@ -951,7 +951,7 @@ export default class BZXWidgetProviderAugur {
 
     const ethAmountToBorrow = await this._getEthAmountToBorrow(sellOrders, value.qty);
     console.log(`ethAmountToBorrow: ${ethAmountToBorrow}`);
-    const weiAmountToBorrow = this.web3.utils.toWei(ethAmountToBorrow.toFixed(), "ether").toString();
+    const weiAmountToBorrow = this.web3.utils.toWei(ethAmountToBorrow.toFixed(18), "ether").toString();
     console.log(`weiAmountToBorrow: ${weiAmountToBorrow}`);
 
     console.log("looking for bzx orders");
