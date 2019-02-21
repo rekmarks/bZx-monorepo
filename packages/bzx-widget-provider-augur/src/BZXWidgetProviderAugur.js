@@ -642,10 +642,12 @@ export default class BZXWidgetProviderAugur {
         return;
       }
 
-      // CALCULATING MARGIN AMOUNT FROM "RATIO" (100 / RATIO)
+      // CALCULATING MARGIN AMOUNT FROM "RATIO" (100 / RATIO) * 10^18
       // .integerValue(BigNumber.ROUND_CEIL); required for future conversion with bn.js (fractional part is not supported)
-      const initialMarginAmount = "50000000000000000000";
-      const maintenanceMarginAmount = "25000000000000000000";
+      const initialMarginAmount = (new BigNumber(100)).multipliedBy(1e18).dividedBy(new BigNumber(value.ratio)).integerValue(BigNumber.ROUND_CEIL);
+      console.log(`initialMarginAmount: ${initialMarginAmount.toFixed(0)}`);
+      const maintenanceMarginAmount = initialMarginAmount.dividedBy(2).integerValue(BigNumber.ROUND_CEIL);
+      console.log(`maintenanceMarginAmount: ${maintenanceMarginAmount.toFixed(0)}`);
 
       // CALCULATING INTEREST AS % FROM LOAN
       const interestAmount = convertedToWeiAmount
@@ -671,7 +673,7 @@ export default class BZXWidgetProviderAugur {
         makerAddress: lenderAddress.toLowerCase(),
         takerAddress: zeroAddress.toLowerCase(),
         tradeTokenToFillAddress: zeroAddress.toLowerCase(),
-        withdrawOnOpen: false,
+        withdrawOnOpen: "0",
         loanTokenAddress: value.asset.toLowerCase(),
         interestTokenAddress: this.wethAddress.toLowerCase(),
         collateralTokenAddress: zeroAddress.toLowerCase(),
@@ -679,8 +681,8 @@ export default class BZXWidgetProviderAugur {
         oracleAddress: orderOracleAddress.toLowerCase(),
         loanTokenAmount: loanAmountInBaseUnits.toFixed(),
         interestAmount: interestAmount.toFixed(),
-        initialMarginAmount: initialMarginAmount.toFixed(),
-        maintenanceMarginAmount: maintenanceMarginAmount.toFixed(),
+        initialMarginAmount: initialMarginAmount.toFixed(0),
+        maintenanceMarginAmount: maintenanceMarginAmount.toFixed(0),
         // USING CONSTANTS BELOW
         lenderRelayFee: "0",
         traderRelayFee: "0",
@@ -783,8 +785,10 @@ export default class BZXWidgetProviderAugur {
 
       // CALCULATING MARGIN AMOUNT FROM "RATIO" (100 / RATIO)
       // .integerValue(BigNumber.ROUND_CEIL); required for future conversion with bn.js (fractional part is not supported)
-      const initialMarginAmount = "50000000000000000000";
-      const maintenanceMarginAmount = "25000000000000000000";
+      const initialMarginAmount = (new BigNumber(100)).multipliedBy(1e18).dividedBy(new BigNumber(value.ratio)).integerValue(BigNumber.ROUND_CEIL);
+      console.log(`initialMarginAmount: ${initialMarginAmount.toFixed(0)}`);
+      const maintenanceMarginAmount = initialMarginAmount.dividedBy(2).integerValue(BigNumber.ROUND_CEIL);
+      console.log(`maintenanceMarginAmount: ${maintenanceMarginAmount.toFixed(0)}`);
 
       // CALCULATING INTEREST AS % FROM LOAN
       const interestAmount = convertedToWeiAmount
@@ -810,7 +814,7 @@ export default class BZXWidgetProviderAugur {
         makerAddress: borrowerAddress.toLowerCase(),
         takerAddress: zeroAddress.toLowerCase(),
         tradeTokenToFillAddress: zeroAddress.toLowerCase(),
-        withdrawOnOpen: false,
+        withdrawOnOpen: "0",
         loanTokenAddress: value.asset.toLowerCase(),
         interestTokenAddress: this.wethAddress.toLowerCase(),
         collateralTokenAddress: this.wethAddress.toLowerCase(),
@@ -818,8 +822,8 @@ export default class BZXWidgetProviderAugur {
         oracleAddress: orderOracleAddress.toLowerCase(),
         loanTokenAmount: borrowAmountInBaseUnits.toFixed(),
         interestAmount: interestAmount.toFixed(),
-        initialMarginAmount: initialMarginAmount.toFixed(),
-        maintenanceMarginAmount: maintenanceMarginAmount.toFixed(),
+        initialMarginAmount: initialMarginAmount.toFixed(0),
+        maintenanceMarginAmount: maintenanceMarginAmount.toFixed(0),
         // USING CONSTANTS BELOW
         lenderRelayFee: "0",
         traderRelayFee: "0",
