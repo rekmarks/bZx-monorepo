@@ -2,6 +2,9 @@ import EventEmitter from "events";
 
 import { EVENT_ASSET_UPDATE } from "../../bzx-widget-common/src";
 import { EVENT_ACCOUNT_UPDATE } from "@bzxnetwork/bzx-widget-common";
+import BigNumber from "bignumber.js";
+
+BigNumber.config({ EXPONENTIAL_AT: 20, ERRORS: false });
 
 export default class BZXWidgetProviderDummy {
   transactionId = "0x";

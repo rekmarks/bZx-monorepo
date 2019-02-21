@@ -8,7 +8,7 @@ import Web3 from "web3";
 import { parseUrlGetParams, zeroAddress } from "./utils";
 import { EVENT_ACCOUNT_UPDATE, EVENT_ASSET_UPDATE, EVENT_INIT_FAILED } from "@bzxnetwork/bzx-widget-common";
 
-BigNumber.config({ EXPONENTIAL_AT: 20 });
+BigNumber.config({ EXPONENTIAL_AT: 20, ERRORS: false });
 
 export default class BZXWidgetProviderAugur {
   networkId = 4;

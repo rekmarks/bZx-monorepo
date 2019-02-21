@@ -5,6 +5,9 @@ import BZXWidgetProviderAugur from "@bzxnetwork/bzx-widget-provider-augur";
 import BZXWidgetProviderDummy from "@bzxnetwork/bzx-widget-provider-dummy";
 
 import * as serviceWorker from "./serviceWorker";
+import BigNumber from "bignumber.js";
+
+BigNumber.config({ EXPONENTIAL_AT: 20, ERRORS: false });
 
 const widgetStyles = {
   padding: "20px",
