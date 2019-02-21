@@ -576,7 +576,7 @@ export default class BZXWidgetProviderAugur {
           collateralTokenAddress: this.wethAddress.toLowerCase(),
           loanTokenAmountFilled: amount.toString(),
           tradeTokenToFillAddress: zeroAddress.toLowerCase(),
-          withdrawOnOpen: "0",
+          withdrawOnOpen: false,
           getObject: false,
           txOpts: { from: this.account.toLowerCase(), gasPrice: this.defaultGasPrice, gas: this.defaultGasAmount }
         });
@@ -671,7 +671,7 @@ export default class BZXWidgetProviderAugur {
         makerAddress: lenderAddress.toLowerCase(),
         takerAddress: zeroAddress.toLowerCase(),
         tradeTokenToFillAddress: zeroAddress.toLowerCase(),
-        withdrawOnOpen: "0",
+        withdrawOnOpen: false,
         loanTokenAddress: value.asset.toLowerCase(),
         interestTokenAddress: this.wethAddress.toLowerCase(),
         collateralTokenAddress: zeroAddress.toLowerCase(),
@@ -810,7 +810,7 @@ export default class BZXWidgetProviderAugur {
         makerAddress: borrowerAddress.toLowerCase(),
         takerAddress: zeroAddress.toLowerCase(),
         tradeTokenToFillAddress: zeroAddress.toLowerCase(),
-        withdrawOnOpen: "0",
+        withdrawOnOpen: false,
         loanTokenAddress: value.asset.toLowerCase(),
         interestTokenAddress: this.wethAddress.toLowerCase(),
         collateralTokenAddress: this.wethAddress.toLowerCase(),
@@ -1159,7 +1159,7 @@ export default class BZXWidgetProviderAugur {
         collateralTokenAddress: this.wethAddress.toLowerCase(),
         loanTokenAmountFilled: amountShouldBeTaken.toFixed(),
         tradeTokenToFillAddress: zeroAddress.toLowerCase(),
-        withdrawOnOpen: "0",
+        withdrawOnOpen: false,
         getObject: false,
         txOpts: { from: this.account.toLowerCase(), gasPrice: this.defaultGasPrice, gas: this.defaultGasAmount }
       });
