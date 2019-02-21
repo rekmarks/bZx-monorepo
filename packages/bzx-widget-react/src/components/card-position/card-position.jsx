@@ -137,6 +137,10 @@ export default class CardPosition extends Component {
         </div>
         <div style={this.ellipsisStyle}>{this.renderMarginLevels()}</div>
         <div style={this.ellipsisStyle}>
+          <span style={this.paramHeaderStyle}>Started:</span>{" "}
+          {moment.unix(this.props.data.loanStartUnixTimestampSec).format("dddd, MMMM Do YYYY, h:mm:ss a")}
+        </div>
+        <div style={this.ellipsisStyle}>
           <span style={this.paramHeaderStyle}>Expiration:</span>{" "}
           {moment.unix(this.props.data.loanEndUnixTimestampSec).format("dddd, MMMM Do YYYY, h:mm:ss a")}
         </div>
@@ -171,6 +175,10 @@ export default class CardPosition extends Component {
         </div>
         {this.renderProfitOrLoss()}
         <div style={this.ellipsisStyle}>{this.renderMarginLevels()}</div>
+        <div style={this.ellipsisStyle}>
+          <span style={this.paramHeaderStyle}>Started:</span>{" "}
+          {moment.unix(this.props.data.loanStartUnixTimestampSec).format("dddd, MMMM Do YYYY, h:mm:ss a")}
+        </div>
         <div style={this.ellipsisStyle}>
           <span style={this.paramHeaderStyle}>Expiration:</span>{" "}
           {moment.unix(this.props.data.loanEndUnixTimestampSec).format("dddd, MMMM Do YYYY, h:mm:ss a")}
