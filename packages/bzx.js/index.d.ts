@@ -62,7 +62,7 @@ export declare interface ILoanPositionState {
   collateralTokenAddressFilled: string;
   collateralTokenAmountFilled: number;
 
-  positionTokenAddressFilled: number;
+  positionTokenAddressFilled: string;
   positionTokenAmountFilled: number;
 
   interestTokenAddress: string;
