@@ -156,8 +156,6 @@ export default class CardPosition extends Component {
   }
 
   renderCardBorrowersLoan() {
-    console.log("this.props.data");
-    console.dir(this.props.data);
     return (
       <Card>
         <div style={this.ellipsisStyle}>
