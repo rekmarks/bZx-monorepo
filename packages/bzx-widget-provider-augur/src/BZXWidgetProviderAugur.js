@@ -244,6 +244,17 @@ export default class BZXWidgetProviderAugur {
     return this.account.toString();
   };
 
+  getSingleLoan = async (loanOrderHash, trader) => {
+    return new Promise((resolve, reject) => {
+      try {
+        this._getSingleLoan(loanOrderHash, trader, resolve, reject);
+      } catch (e) {
+        console.dir(e);
+        reject("error happened while processing your request");
+      }
+    });
+  };
+
   getSingleOrder = async loanOrderHash => {
     return new Promise((resolve, reject) => {
       try {
@@ -464,6 +475,20 @@ export default class BZXWidgetProviderAugur {
     this.eventEmitter.emit(EVENT_ASSET_UPDATE, this.assets, this.defaultAsset);
   };
 
+  _getSingleLoan = async (loanOrderHash, trader, resolve, reject) => {
+    try {
+      const result = await this.bzxjs.getSingleLoan({
+        loanOrderHash: loanOrderHash.toLowerCase(),
+        trader: trader.toLowerCase()
+      });
+      resolve(result);
+    } catch (e) {
+      console.dir(e);
+      reject("error happened while processing your request");
+      return;
+    }
+  };
+
   _getSingleOrder = async (loanOrderHash, resolve, reject) => {
     try {
       const result = await this.bzxjs.getSingleOrder({ loanOrderHash: loanOrderHash.toLowerCase() });
@@ -525,6 +550,14 @@ export default class BZXWidgetProviderAugur {
       reject("error happened while processing your request");
       return;
     }
+  };
+
+  isEmpty = (obj) => {
+    for(var key in obj) {
+      if(obj.hasOwnProperty(key))
+        return false;
+    }
+    return true;
   };
 
   _handleLoanOrderTake = async (
@@ -883,7 +916,7 @@ export default class BZXWidgetProviderAugur {
     //
     // return result;
     let rate = (new BigNumber(conv.rate)).dividedBy(1e18);
-    let result = value.dividedBy(rate);
+    let result = value.multipliedBy(rate);
 
     console.log(`rate: ${rate.toFixed()}`);
     console.log(`result: ${result.toFixed()}`);
@@ -959,7 +992,12 @@ export default class BZXWidgetProviderAugur {
     console.log(`weiAmountToBorrow: ${weiAmountToBorrow}`);
 
     console.log("looking for bzx orders");
-    const ethLendOrders = await this._findLendOrdersForCurrentMarket(marketId, this.wethAddress, weiAmountToBorrow);
+    const ethLendOrders = await this._findLendOrdersForCurrentMarket(
+      marketId,
+      this.wethAddress.toLowerCase(),
+      value.asset.toLowerCase(),
+      weiAmountToBorrow
+    );
     if (ethLendOrders.length === 0) {
       reject("not enough liquidity (bzx lend orders)");
       return;
@@ -982,9 +1020,11 @@ export default class BZXWidgetProviderAugur {
     const sharesAmountToBorrow = this.web3.utils.toWei(value.qty, "ether");
     console.log(`sharesAmountToBorrow: ${sharesAmountToBorrow}`);
 
+    console.log("looking for bzx orders");
     const sharesLendOrders = await this._findLendOrdersForCurrentMarket(
       marketId,
       value.asset.toLowerCase(),
+      this.wethAddress.toLowerCase(),
       sharesAmountToBorrow
     );
     if (sharesLendOrders.length === 0) {
@@ -1088,13 +1128,13 @@ export default class BZXWidgetProviderAugur {
       console.log(`tokenPrice: ${tokenPrice}`);
 
       amountToTake = amountToTake.minus(amountShouldBeTaken);
-      amountToBorrow = amountToBorrow.plus(amountShouldBeTaken.dividedBy(tokenPrice));
+      amountToBorrow = amountToBorrow.plus(amountShouldBeTaken.multipliedBy(tokenPrice));
     }
 
     return amountToBorrow;
   };
 
-  _findLendOrdersForCurrentMarket = async (market, tokenAddress, amount) => {
+  _findLendOrdersForCurrentMarket = async (market, tokenAddress, positionAddress, amount) => {
     let fullLendOrdersList = [];
     const pageSize = 100;
     let readCount = 0;
@@ -1131,13 +1171,42 @@ export default class BZXWidgetProviderAugur {
     console.log(`amountToTake: ${amountToTake.toFixed()}`);
     let filteredLendOrdersList = [];
     for (let lendOrder of fullLendOrdersList) {
+      console.log(`getting loan for order: ${lendOrder.loanOrderHash.toLowerCase()}`);
+      let relatedLoan = await this.bzxjs.getSingleLoan({
+        loanOrderHash: lendOrder.loanOrderHash.toLowerCase(),
+        trader: this.account.toLowerCase()
+      });
+      console.log("relatedLoan");
+      console.dir(relatedLoan);
+      // whether the user is getting funds or increasing existing position
+      // method returns an empty object when there is no previously opened position
+      // if we have already taken the order, but haven't yet acquired tokens, loanTokenAddress will be equal to positionTokenAddressFilled
+      let isGettingFunds =
+        this.isEmpty(relatedLoan)
+          ? true
+          : !relatedLoan.active
+            ? true
+            : relatedLoan.loanTokenAddress.toLowerCase() === relatedLoan.positionTokenAddressFilled.toLowerCase();
+      console.log(`isGettingFunds: ${isGettingFunds}`);
+
+      console.log(`positionAddress: ${positionAddress}`);
+      if (
+        !isGettingFunds
+        &&
+        relatedLoan.loanTokenAddress.toLowerCase() !== relatedLoan.positionTokenAddressFilled.toLowerCase()
+        &&
+        relatedLoan.positionTokenAddressFilled.toLowerCase() !== positionAddress.toLowerCase()
+      ) continue;
+
+      console.log(`isGettingFunds: ${isGettingFunds}`);
+
       let amountShouldBeTaken = BigNumber.minimum(new BigNumber(lendOrder.loanTokenAmount), amountToTake);
       if (amountShouldBeTaken.eq(0)) {
         break;
       }
 
       amountToTake = amountToTake.minus(amountShouldBeTaken);
-      filteredLendOrdersList.push(lendOrder);
+      filteredLendOrdersList.push({...lendOrder, isGettingFunds: isGettingFunds});
     }
     if (!amountToTake.eq(0)) {
       // not enough liquidity
@@ -1176,7 +1245,11 @@ export default class BZXWidgetProviderAugur {
   _takeAugurOrdersWithBzx = async (orders, tokenAddress) => {
     for (let e of orders) {
       console.log(`Trading augur position with bzx order ${e.loanOrderHash}`);
+      console.log(`isGettingFunds: ${e.isGettingFunds}`);
       console.log(tokenAddress);
+      if (!e.isGettingFunds)
+        continue;
+
       await this.bzxjs.tradePositionWithOracle({
         orderHash: e.loanOrderHash.toLowerCase(),
         tradeTokenAddress: tokenAddress.toLowerCase(),

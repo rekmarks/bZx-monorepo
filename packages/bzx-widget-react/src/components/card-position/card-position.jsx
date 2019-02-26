@@ -57,7 +57,6 @@ export default class CardPosition extends Component {
     }
 
     this.props.getSingleOrder(this.props.data.loanOrderHash).then(result => {
-      console.dir(result);
       this.setState({
         ...this.state,
         fullOrder: result,
@@ -74,9 +73,12 @@ export default class CardPosition extends Component {
     this.setState({
       ...this.state,
       actionTradeWithCurrentAssetEnabled:
-        this.props.isWethToken(this.props.currentAsset.toLowerCase()) !==
-        this.props.isWethToken(this.props.data.loanTokenAddress.toLowerCase()) &&
-        this.props.data.trader.toLowerCase() === this.props.currentAccount.toLowerCase()
+        this.props.data.positionTokenAddressFilled === this.props.data.loanTokenAddress
+        &&
+          this.props.isWethToken(this.props.currentAsset.toLowerCase()) !==
+            this.props.isWethToken(this.props.data.loanTokenAddress.toLowerCase())
+        &&
+          this.props.data.trader.toLowerCase() === this.props.currentAccount.toLowerCase()
     });
   }
 
@@ -85,9 +87,12 @@ export default class CardPosition extends Component {
       this.setState({
         ...this.state,
         actionTradeWithCurrentAssetEnabled:
-          this.props.isWethToken(nextProps.currentAsset.toLowerCase()) !==
-            this.props.isWethToken(nextProps.data.loanTokenAddress.toLowerCase()) &&
-          nextProps.data.trader.toLowerCase() === this.props.currentAccount.toLowerCase(),
+          nextProps.data.positionTokenAddressFilled === nextProps.data.loanTokenAddress
+          &&
+            this.props.isWethToken(nextProps.currentAsset.toLowerCase()) !==
+              this.props.isWethToken(nextProps.data.loanTokenAddress.toLowerCase())
+          &&
+            nextProps.data.trader.toLowerCase() === this.props.currentAccount.toLowerCase(),
         actionLoanOrderCancelEnabled: this.state.fullOrder
           ? new BigNumber(this.state.fullOrder.loanTokenAmount)
               .minus(new BigNumber(this.state.fullOrder.orderCancelledAmount))
@@ -151,27 +156,34 @@ export default class CardPosition extends Component {
   }
 
   renderCardBorrowersLoan() {
+    console.log("this.props.data");
+    console.dir(this.props.data);
     return (
       <Card>
         <div style={this.ellipsisStyle}>
           <span style={this.paramHeaderStyle}>Order #:</span> {this.props.data.loanOrderHash}
         </div>
         <div style={this.ellipsisStyle}>
-          <span style={this.paramHeaderStyle}>Token:</span>{" "}
+          <span style={this.paramHeaderStyle}>Token (loan):</span>{" "}
           {this.props.getTokenNameFromAddress(this.props.data.loanTokenAddress.toLowerCase())} (
           {this.props.data.loanTokenAddress})
         </div>
         <div style={this.ellipsisStyle}>
-          <span style={this.paramHeaderStyle}>Amount (avail. / full):</span>{" "}
-          {this.state.fullOrder
-            ? new BigNumber(this.state.fullOrder.loanTokenAmount)
-                .minus(new BigNumber(this.props.data.loanTokenAmountFilled))
-                .minus(new BigNumber(this.state.fullOrder.orderCancelledAmount))
-                .dividedBy(1e18)
-                .toFixed(4)
-            : "?"}
-          {" / "}
-          {this.state.fullOrder ? new BigNumber(this.state.fullOrder.loanTokenAmount).dividedBy(1e18).toFixed(4) : "?"}
+          <span style={this.paramHeaderStyle}>Amount (loan):</span>{" "}
+          {new BigNumber(this.props.data.loanTokenAmountFilled)
+            .dividedBy(1e18)
+            .toFixed(8)}
+        </div>
+        <div style={this.ellipsisStyle}>
+          <span style={this.paramHeaderStyle}>Token (pos):</span>{" "}
+          {this.props.getTokenNameFromAddress(this.props.data.positionTokenAddressFilled.toLowerCase())} (
+          {this.props.data.positionTokenAddressFilled})
+        </div>
+        <div style={this.ellipsisStyle}>
+          <span style={this.paramHeaderStyle}>Amount (pos):</span>{" "}
+          {new BigNumber(this.props.data.positionTokenAmountFilled)
+            .dividedBy(1e18)
+            .toFixed(8)}
         </div>
         {this.renderProfitOrLoss()}
         <div style={this.ellipsisStyle}>{this.renderMarginLevels()}</div>

@@ -87,6 +87,7 @@ export default class OrdersFillableList extends Component {
               isAsk={isAsk}
               doLoanOrderTake={onTakeAction}
               doLoanOrderCancel={onCancelAction}
+              getSingleLoan={this.props.getSingleLoan}
             />
           </Item>
         )}

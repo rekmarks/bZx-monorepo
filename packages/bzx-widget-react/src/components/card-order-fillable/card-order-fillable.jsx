@@ -15,7 +15,8 @@ export default class CardOrderFillable extends Component {
     isAsk: PropTypes.bool,
     data: PropTypes.object,
     doLoanOrderTake: PropTypes.func,
-    doLoanOrderCancel: PropTypes.func
+    doLoanOrderCancel: PropTypes.func,
+    getSingleLoan: PropTypes.func
   };
 
   styleColumnRowType = {
@@ -53,7 +54,39 @@ export default class CardOrderFillable extends Component {
   constructor(props) {
     super(props);
 
-    this.state = {};
+    this.state = { isGettingFunds: true };
+  }
+
+  async componentDidMount() {
+    let relatedLoan = await this.props.getSingleLoan(
+      this.props.data.loanOrderHash.toLowerCase(),
+      this.props.currentAccount.toLowerCase()
+    );
+
+    let isGettingFunds =
+      this._isEmpty(relatedLoan)
+        ? true
+        : !relatedLoan.active
+          ? true
+          : relatedLoan.loanTokenAddress.toLowerCase() === relatedLoan.positionTokenAddressFilled.toLowerCase();
+
+    this.setState({ ...this.state, isGettingFunds: isGettingFunds });
+  }
+
+  async componentWillReceiveProps(nextProps, nextContext) {
+    let relatedLoan = await this.props.getSingleLoan(
+      this.props.data.loanOrderHash.toLowerCase(),
+      this.props.currentAccount.toLowerCase()
+    );
+
+    let isGettingFunds =
+      this._isEmpty(relatedLoan)
+        ? true
+        : !relatedLoan.active
+          ? true
+          : relatedLoan.loanTokenAddress.toLowerCase() === relatedLoan.positionTokenAddressFilled.toLowerCase();
+
+    this.setState({ ...this.state, isGettingFunds: isGettingFunds });
   }
 
   render() {
@@ -72,7 +105,9 @@ export default class CardOrderFillable extends Component {
     return this.props.isAsk ? (
       <Icon type="left-circle" theme="twoTone" twoToneColor="#eb2f96" />
     ) : (
-      <Icon type="right-circle" theme="twoTone" twoToneColor="#52c41a" />
+      this.state.isGettingFunds
+        ? (<Icon type="right-circle" theme="twoTone" twoToneColor="#52c41a" />)
+        : <Icon type="right-circle" theme="twoTone" twoToneColor="#6600ff" />
     );
   }
 
@@ -135,5 +170,13 @@ export default class CardOrderFillable extends Component {
       value => message.success(`Take order operation was successful! TX: ${value}`),
       value => message.error(`Take order operation failed: ${value}!`)
     );
+  };
+
+  _isEmpty = (obj) => {
+    for(var key in obj) {
+      if(obj.hasOwnProperty(key))
+        return false;
+    }
+    return true;
   };
 }

@@ -94,6 +94,7 @@ export default class BZXWidget extends Component {
                 listLoanOrdersAsksAvailable={this.props.provider.listLoanOrdersAsksAvailable}
                 doLoanOrderTake={this.props.provider.doLoanOrderTake}
                 doLoanOrderCancel={this.props.provider.doLoanOrderCancel}
+                getSingleLoan={this.props.provider.getSingleLoan}
                 listSize={100}
               />
             </Tabs.TabPane>
