@@ -506,7 +506,6 @@ contract AugurOracle is BZxOwnable, OracleInterface, EIP20Wrapper, EMACollector,
         public
         view
         returns (bool) {
-        return false; // TODO
 
         return (
             getCurrentMarginAmount(
