@@ -1202,7 +1202,8 @@ export default class BZXWidgetProviderAugur {
 
       console.log(`isGettingFunds: ${isGettingFunds}`);
 
-      let amountShouldBeTaken = BigNumber.minimum(new BigNumber(lendOrder.loanTokenAmount), amountToTake);
+      let inOrderAmount = new BigNumber(lendOrder.loanTokenAmount).minus(new BigNumber(lendOrder.orderFilledAmount)).minus(new BigNumber(lendOrder.orderCancelledAmount));
+      let amountShouldBeTaken = BigNumber.minimum(inOrderAmount, amountToTake);
       if (amountShouldBeTaken.eq(0)) {
         break;
       }
@@ -1223,7 +1224,8 @@ export default class BZXWidgetProviderAugur {
   _takeLendOrders = async (orders, amount) => {
     let amountToTake = new BigNumber(amount);
     for (let e of orders) {
-      let amountShouldBeTaken = BigNumber.minimum(new BigNumber(e.loanTokenAmount), amountToTake);
+      let inOrderAmount = new BigNumber(e.loanTokenAmount).minus(new BigNumber(e.orderFilledAmount)).minus(new BigNumber(e.orderCancelledAmount));
+      let amountShouldBeTaken = BigNumber.minimum(inOrderAmount, amountToTake);
       if (amountShouldBeTaken.eq(0)) {
         break;
       }
