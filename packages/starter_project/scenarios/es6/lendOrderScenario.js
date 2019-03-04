@@ -24,8 +24,8 @@ async function lendOrderScenario(l, c, lenderAddress, traderAddress, oracles) {
     oracleAddress: oracles[0].address.toLowerCase(),
     loanTokenAmount: c.web3.utils.toWei("10", "ether"),
     interestAmount: c.web3.utils.toWei("0.2", "ether"),
-    initialMarginAmount: "50",
-    maintenanceMarginAmount: "25",
+    initialMarginAmount: "50000000000000000000",
+    maintenanceMarginAmount: "25000000000000000000",
     lenderRelayFee: c.web3.utils.toWei("0.0015", "ether"),
     traderRelayFee: c.web3.utils.toWei("0.0025", "ether"),
     maxDurationUnixTimestampSec: "2419200",
@@ -65,7 +65,7 @@ async function lendOrderScenario(l, c, lenderAddress, traderAddress, oracles) {
     collateralTokenAddress: collateralToken.address,
     loanTokenAmountFilled: c.web3.utils.toWei("1", "ether"),
     tradeTokenToFillAddress: utils.zeroAddress.toLowerCase(),
-    withdrawOnOpen: "0",
+    withdrawOnOpen: false,
     getObject: false,
     txOpts: { from: traderAddress, gasLimit: utils.gasLimit }
   });
@@ -111,8 +111,8 @@ async function lendOrderOnChainScenario(l, c, lenderAddress, traderAddress, orac
     oracleAddress: oracles[0].address.toLowerCase(),
     loanTokenAmount: c.web3.utils.toWei("10", "ether"),
     interestAmount: c.web3.utils.toWei("0.2", "ether"),
-    initialMarginAmount: "50",
-    maintenanceMarginAmount: "25",
+    initialMarginAmount: "50000000000000000000",
+    maintenanceMarginAmount: "25000000000000000000",
     lenderRelayFee: c.web3.utils.toWei("0.0015", "ether"),
     traderRelayFee: c.web3.utils.toWei("0.0025", "ether"),
     maxDurationUnixTimestampSec: "2419200",
@@ -160,7 +160,7 @@ async function lendOrderOnChainScenario(l, c, lenderAddress, traderAddress, orac
     collateralTokenAddress: collateralToken.address,
     loanTokenAmountFilled: c.web3.utils.toWei("1", "ether"),
     tradeTokenToFillAddress: utils.zeroAddress.toLowerCase(),
-    withdrawOnOpen: "0",
+    withdrawOnOpen: false,
     getObject: false,
     txOpts: { from: traderAddress, gasLimit: utils.gasLimit }
   });

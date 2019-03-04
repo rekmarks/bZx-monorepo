@@ -27,8 +27,8 @@ async function oracleTradeScenario(l, c, lenderAddress, trader1Address, trader2A
     oracleAddress: oracles[0].address.toLowerCase(),
     loanTokenAmount: c.web3.utils.toWei("100", "ether"),
     interestAmount: c.web3.utils.toWei("2", "ether"),
-    initialMarginAmount: "50",
-    maintenanceMarginAmount: "5",
+    initialMarginAmount: "50000000000000000000",
+    maintenanceMarginAmount: "25000000000000000000",
     lenderRelayFee: c.web3.utils.toWei("0.00", "ether"),
     traderRelayFee: c.web3.utils.toWei("0.00", "ether"),
     maxDurationUnixTimestampSec: "2419200",
@@ -63,7 +63,7 @@ async function oracleTradeScenario(l, c, lenderAddress, trader1Address, trader2A
     collateralTokenAddress: collateralToken.address,
     loanTokenAmountFilled: c.web3.utils.toWei("0.1", "ether"),
     tradeTokenToFillAddress: utils.zeroAddress.toLowerCase(),
-    withdrawOnOpen: "0",
+    withdrawOnOpen: false,
     getObject: false,
     txOpts: { from: trader1Address, gasLimit: utils.gasLimit }
   });
