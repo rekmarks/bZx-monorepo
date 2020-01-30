@@ -232,10 +232,7 @@ contract LoanTokenLogicV4_Chai is AdvancedToken, OracleNotifierInterface {
     {
         _settleInterest();
 
-        ERC20 _dai;
-        if (borrowAmount != 0) {
-            _dai = _dsrWithdraw(borrowAmount);
-        }
+        ERC20 _dai = _dsrWithdraw(borrowAmount);
 
         uint256 beforeEtherBalance = address(this).balance.sub(msg.value);
         uint256 beforeAssetsBalance = _underlyingBalance()

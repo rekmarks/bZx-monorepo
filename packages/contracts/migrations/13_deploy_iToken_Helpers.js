@@ -26,18 +26,28 @@ module.exports = (deployer, network, accounts) => {
     await bZxProxy.replaceContract(iTokens_loanManagementFunctions3.address);
 
     /*
-    Kovan:
+    Mainnet:
     bZxProxy = await iTokens_loanManagementFunctions3.at(BZxProxy.address)
-    await bZxProxy.setLenderIsiTokenBatch(
+    await proxy.setLenderIsiTokenBatch(
       [
-        "0x54be07007c680ba087b3fcd8e675d1c929b6aaf5",
         "0xa1e58f3b1927743393b25f261471e1f2d3d9f0f6",
-        "0x6c1e2b0f67e00c06c8e2be7dc681ab785163ff4d",
-        "0x3e37E3f4C3b0B0b5944Cc1F366152Dea22EF63f9"
+        "0x54be07007c680ba087b3fcd8e675d1c929b6aaf5"
       ],
       [
         true,
-        true,
+        true
+      ]
+    );
+
+
+    Kovan:
+    bZxProxy = await iTokens_loanManagementFunctions3.at(BZxProxy.address)
+    await proxy.setLenderIsiTokenBatch(
+      [
+        "0xa1e58f3b1927743393b25f261471e1f2d3d9f0f6",
+        "0x54be07007c680ba087b3fcd8e675d1c929b6aaf5"
+      ],
+      [
         true,
         true
       ]

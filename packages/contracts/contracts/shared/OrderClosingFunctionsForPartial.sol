@@ -301,8 +301,11 @@ contract OrderClosingFunctionsForPartial is BZxStorage, MiscFunctions, OrderClos
             sourceTokenAmount,
             maxDestTokenAmount
         );
-        require (destTokenAmountReceived != 0, "kyber swap failed");
-        require (destTokenAmountReceived != MAX_UINT, "kyber pricing error");
+        require (destTokenAmountReceived != 0, "destTokenAmountReceived == 0");
+
+        if (destTokenAmountReceived == MAX_UINT) {
+            destTokenAmountReceived = 0;
+        }
     }
 
     function _settlePartialClosure(

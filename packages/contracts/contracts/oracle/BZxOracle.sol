@@ -129,13 +129,6 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
     address public constant bZRxTokenContract = 0xe3e682A8Fc7EFec410E4099cc09EfCC0743C634a;
     address public constant oracleNotifier = 0xc406f51A23F28D6559e311010d3EcD8A07696a45;*/
 
-    // Ropsten
-    /*address public constant vaultContract = 0xbAB325Bc2E78ea080F46c1A2bf9BF25F8A3c4d69;
-    address public constant kyberContract = 0x818E6FECD516Ecc3849DAf6845e3EC868087B755;
-    address public constant wethContract = 0xc778417E063141139Fce010982780140Aa0cD5Ab;
-    address public constant bZRxTokenContract = 0xF8b0B6Ee32a617beca665b6c5B241AC15b1ACDD5;
-    address public constant oracleNotifier = 0xe09011AF509f72C46312ebabceabC7c5Ea7E6991;*/
-
     //address public constant kyberNetworkContract = ;
 
     //mapping (uint256 => uint256) public collateralInWethAmounts; // mapping of position ids to initial collateralInWethAmounts
@@ -455,32 +448,22 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
         returnValues[1] = collateralTokenBalance
             .sub(EIP20(loanPosition.collateralTokenAddressFilled).balanceOf(address(this)));
 
+        if (returnValues[2] != 0) {
+            if (loanPosition.collateralTokenAddressFilled == wethAddress) {
+                returnValues[1] = returnValues[1].add(returnValues[2]);
+            }
+        }
+
+        require(loanPosition.collateralTokenAmountFilled >= returnValues[1], "invalid spend");
         if (returnValues[1] < loanPosition.collateralTokenAmountFilled) {
             // send unused collateral token back to the vault
             collateralTokenBalance = loanPosition.collateralTokenAmountFilled - returnValues[1];
-
-            if (returnValues[2] != 0 && loanPosition.collateralTokenAddressFilled == wethAddress) {
-                if (collateralTokenBalance > returnValues[2]) {
-                    collateralTokenBalance -= returnValues[2];
-                } else {
-                    collateralTokenBalance = 0;
-                }
-            }
-
-            if (collateralTokenBalance != 0) {
-                if (!_transferToken(
-                    loanPosition.collateralTokenAddressFilled,
-                    vaultContract,
-                    collateralTokenBalance
-                )) {
-                    revert("_transferToken failed");
-                }
-            }
-        } else if (returnValues[1] > loanPosition.collateralTokenAmountFilled) {
-            if (loanPosition.collateralTokenAddressFilled == wethAddress) {
-                returnValues[1] = loanPosition.collateralTokenAmountFilled;
-            } else {
-                revert("invalid spend");
+            if (!_transferToken(
+                loanPosition.collateralTokenAddressFilled,
+                vaultContract,
+                collateralTokenBalance
+            )) {
+                revert("_transferToken failed");
             }
         }
 
@@ -1153,30 +1136,22 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
             gasUpperBound.mul(gasPrice).mul(marginCallerRewardPercent).div(10**20) :
             0;
 
-        wethAmountNeeded = wethAmountNeeded
-            .add(reserve);
-
-        if (wethAmountNeeded != 0) {
-            if (collateralTokenAddress == wethAddress) {
-                wethAmountReceived = Math.min256(collateralTokenAmountFilled, wethAmountNeeded);
-            } else {
-                // trade collateral token for WETH
-                (wethAmountReceived,) = _trade(
-                    collateralTokenAddress,
-                    wethAddress,
-                    address(this), // BZxOracle receives the WETH proceeds
-                    address(this),
-                    collateralTokenAmountFilled,
-                    wethAmountNeeded,
-                    0 // minConversionRate
-                );
-                if (wethAmountReceived == MAX_UINT) {
-                    wethAmountReceived = 0;
-                }
+        if (wethAmountNeeded != 0 || reserve != 0) {
+            // trade collateral token for WETH
+            (wethAmountReceived,) = _trade(
+                collateralTokenAddress,
+                wethAddress,
+                address(this), // BZxOracle receives the WETH proceeds
+                address(this),
+                collateralTokenAmountFilled,
+                wethAmountNeeded.add(reserve),
+                0 // minConversionRate
+            );
+            if (wethAmountReceived == MAX_UINT) {
+                wethAmountReceived = 0;
             }
         }
-
-        if (wethAmountReceived < wethAmountNeeded) {
+        if (wethAmountReceived < wethAmountNeeded.add(reserve)) {
             reserve = 0;
         }
 

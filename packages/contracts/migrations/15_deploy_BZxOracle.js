@@ -19,9 +19,9 @@ const config = require("../protocol-config.js");
 const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const OLD_ORACLE_ADDRESS = "";
-//const OLD_ORACLE_ADDRESS = "0xb017c9936f9271daff23d4c9876651442958a80f"; // mainnet
-//const OLD_ORACLE_ADDRESS = "0x4330762418df3555ddd1d732200b317c9239b941"; // ropsten
-//const OLD_ORACLE_ADDRESS = "0x9b97fd524e25a177371238221cc93695d07b79ec"; // kovan
+//const OLD_ORACLE_ADDRESS = "0xa88172b2afc6e79693acd4e1e558d4d3e3662114"; // mainnet
+//const OLD_ORACLE_ADDRESS = "0x208ec15dbb52b417343887ed8a5523d3c4d23e55"; // ropsten
+//const OLD_ORACLE_ADDRESS = "0xc72e3a07b25c4ce85691b2eaca92ff2dd9ad06b3"; // kovan
 //const OLD_ORACLE_ADDRESS = "0x76dE3d406FeE6c3316558406B17fF785c978E98C"; // rinkeby
 
 module.exports = (deployer, network, accounts) => {
@@ -61,7 +61,7 @@ module.exports = (deployer, network, accounts) => {
   if (network == "mainnet") {
     FULCRUM_ORACLE2 = "0x4c1974e5ff413c6e061ae217040795aaa1748e8b";
   } else if (network == "ropsten") {
-    FULCRUM_ORACLE2 = "0x115338e77339d64b3d58181aa9c0518df9d18022";
+    FULCRUM_ORACLE2 = "";
   }
 
   let FULCRUM_ORACLE3 = "";
@@ -160,7 +160,6 @@ module.exports = (deployer, network, accounts) => {
         ]);
 
         await oracle.setMaxSourceAmountAllowedBatch([
-          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", // WETH
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", // USDC
           "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359", // SAI
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", // WBTC
@@ -174,7 +173,6 @@ module.exports = (deployer, network, accounts) => {
           //"0x6b175474e89094c44da98b954eedeac495271d0f"  // DAI
         ],
         [
-          "500000000000000000000",      // WETH
           "70000000000",                // USDC
           "75000000000000000000000",    // SAI
           "450000000",                  // WBTC
@@ -219,7 +217,6 @@ module.exports = (deployer, network, accounts) => {
           "0xd0a1e359811322d97991e03f863a0c30c2cf029c", // WETH
           "0xc4375b7de8af5a38a93548eb8453a498222c4ff2", // SAI
           "0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa", // DAI
-          "0xad67cB4d63C9da94AcA37fDF2761AaDF780ff4a2", // KNC
           "0x71DD45d9579A499B58aa85F50E5E3B241Ca2d10d", // CHAI
         ],
         [
@@ -227,7 +224,6 @@ module.exports = (deployer, network, accounts) => {
           "true", // WETH
           "true", // SAI
           "true", // DAI
-          "true", // KNC
           "true", // CHAI
         ]
         );
@@ -236,7 +232,6 @@ module.exports = (deployer, network, accounts) => {
           "0xd0a1e359811322d97991e03f863a0c30c2cf029c", // WETH
           "0xc4375b7de8af5a38a93548eb8453a498222c4ff2", // SAI
           "0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa", // DAI
-          "0xad67cB4d63C9da94AcA37fDF2761AaDF780ff4a2", // KNC
           "0x71DD45d9579A499B58aa85F50E5E3B241Ca2d10d", // CHAI
         ]);
       } else if (network == "rinkeby") {
@@ -258,26 +253,6 @@ module.exports = (deployer, network, accounts) => {
           "0xc778417e063141139fce010982780140aa0cd5ab", // WETH
           "0x5592ec0cfb4dbc12d3ab100b257153436a1f0fea", // SAI (Compound)
           "0x6e894660985207feb7cf89faf048998c71e8ee89", // REP (Compound)
-        ]);
-      } else if (network == "ropsten") {
-        await oracle.setSupportedTokensBatch([
-          "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // ETH
-          "0xc778417e063141139fce010982780140aa0cd5ab", // WETH
-          "0xdb67275d12909bc7038a6c6343dd581f7cdbb391", // DAI (Maker)
-          "0xf80A32A835F79D7787E8a8ee5721D0fEaFd78108", // DAI (Aave)
-        ],
-        [
-          "true", // ETH
-          "true", // WETH
-          "true", // DAI (Maker)
-          "true", // DAI (Aave)
-        ]
-        );
-
-        await oracle.setDecimalsBatch([
-          "0xc778417e063141139fce010982780140aa0cd5ab", // WETH
-          "0xdb67275d12909bc7038a6c6343dd581f7cdbb391", // DAI (Maker)
-          "0xf80A32A835F79D7787E8a8ee5721D0fEaFd78108", // DAI (Aave)
         ]);
       }
 

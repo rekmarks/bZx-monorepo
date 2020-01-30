@@ -28,7 +28,7 @@ module.exports = {
         AssetProxyOwner: "0xf5fa5b5fed2727a0e44ac67f6772e97977aa358b"
       },
       ENS: {
-        Registry: "0x112234455c3a32fd11230c42e7bccd4a84e02010",
+        Registry: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
         Resolver: "0x9C4c3B509e47a298544d0fD0591B47550845e903"
       },
       OracleNotifier: "0xe09011af509f72c46312ebabceabc7c5ea7e6991",
@@ -111,7 +111,7 @@ module.exports = {
         AssetProxyOwner: "0xdffe798c7172dd6deb32baee68af322e8f495ce0"
       },
       ENS: {
-        Registry: "0x314159265dd8dbb310642f98f50c066173c1259b",
+        Registry: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
         Resolver: "0xD3ddcCDD3b25A8a7423B5bEe360a42146eb4Baf3"
       },
       WethHelper: "0x3b5bDCCDFA2a0a1911984F203C19628EeB6036e0",
