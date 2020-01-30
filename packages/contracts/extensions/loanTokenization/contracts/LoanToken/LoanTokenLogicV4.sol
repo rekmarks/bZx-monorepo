@@ -201,7 +201,7 @@ contract LoanTokenLogicV4 is AdvancedToken, OracleNotifierInterface {
         returns (bytes memory)
     {
         _checkPause();
-        _settleInterest();
+        //_settleInterest();
 
         uint256 beforeEtherBalance = address(this).balance.sub(msg.value);
         uint256 beforeAssetsBalance = ERC20(loanTokenAddress).balanceOf(address(this))
