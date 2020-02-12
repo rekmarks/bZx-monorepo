@@ -28,7 +28,7 @@ module.exports = {
         AssetProxyOwner: "0xf5fa5b5fed2727a0e44ac67f6772e97977aa358b"
       },
       ENS: {
-        Registry: "0x112234455c3a32fd11230c42e7bccd4a84e02010",
+        Registry: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
         Resolver: "0x9C4c3B509e47a298544d0fD0591B47550845e903"
       },
       OracleNotifier: "0xe09011af509f72c46312ebabceabc7c5ea7e6991",
@@ -38,6 +38,8 @@ module.exports = {
       BZxEther: "0xa3eBDf66e0292F1d5FD82Ae3fcd92551Ac9dB081",
       MultiSig: "0x35b94649Bd03D13eF08e999127351Cc52286473C",
       TokenizedRegistry: "0xd03eea21041a19672e451bcbb413ce8be72d0381", // old: "0xaa5c713387972841995553c9690459596336800b",
+      LoanTokenSettings: "0x633a8328ae5947FA5E173Cd5e2c8a838637939c3",
+      LoanTokenSettingsLowerAdmin: "0xfC92Cf77FC3ef447F631a37E341c6803AdCEe622",
       SAITokenAddress: "0xad6d458402f60fd3bd25163575031acdce07538d", // Kyber SAI
       WBTCTokenAddress: "0x95cc8d8f29d0f7fcc425e8708893e759d1599c97" // Kyber ENG
     },
@@ -66,7 +68,7 @@ module.exports = {
       MultiSig: "",
       TokenizedRegistry: "0xF1C87dD61BF8a4e21978487e2705D52AA687F97E",
       LoanTokenSettings: "0x7645F5FFd0b24A60C6A9fFF54Ce767f144f41Df4",
-      LoanTokenSettingsLowerAdmin: "0x7645F5FFd0b24A60C6A9fFF54Ce767f144f41Df4",
+      LoanTokenSettingsLowerAdmin: "0x0E45e9D4b318C0EDf2Da94a929d90408d556f740",
       SAITokenAddress: "0xC4375B7De8af5a38a93548eb8453a498222C4fF2",
       DAITokenAddress: "0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa",
       CHAITokenAddress: "0x71DD45d9579A499B58aa85F50E5E3B241Ca2d10d",
@@ -109,7 +111,7 @@ module.exports = {
         AssetProxyOwner: "0xdffe798c7172dd6deb32baee68af322e8f495ce0"
       },
       ENS: {
-        Registry: "0x314159265dd8dbb310642f98f50c066173c1259b",
+        Registry: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
         Resolver: "0xD3ddcCDD3b25A8a7423B5bEe360a42146eb4Baf3"
       },
       WethHelper: "0x3b5bDCCDFA2a0a1911984F203C19628EeB6036e0",
