@@ -227,14 +227,14 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         bytes memory /*loanDataBytes*/)
         public
         payable
+        onlyOwner
         nonReentrant
         fixedSaneRate
         returns (uint256)
     {
+        require(msg.sender == tx.origin, "no contract calls");
         require(!mintingPaused, "paused");
         require(msg.value != 0, "no ether sent");
-
-        _checkTradeSize(wethContract, msg.value);
 
         uint256 netCollateralAmount;
         uint256 interestDepositRemaining;
@@ -285,15 +285,15 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         bytes memory loanDataBytes)
         public
         payable
+        onlyOwner
         nonReentrant
         fixedSaneRate
         returns (uint256)
     {
+        require(msg.sender == tx.origin, "no contract calls");
         uint256 mintAmount;
         require(!mintingPaused, "paused");
         require(depositAmount != 0, "depositAmount == 0");
-
-        _checkTradeSize(depositTokenAddress, depositAmount);
 
         uint256 value1; // netCollateralAmount
         uint256 value2; // interestDepositRemaining
@@ -362,18 +362,19 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         address receiver,
         uint256 burnAmount,
         uint256 minPriceAllowed,
-        bytes memory loanDataBytes)
+        bytes memory /*loanDataBytes*/)
         public
         payable
         nonReentrant
         fixedSaneRate
         returns (uint256)
     {
+        require(msg.sender == tx.origin, "no contract calls");
         require(!burningPaused, "paused");
         (uint256 tradeTokenAmountOwed, uint256 currentPrice) = _burnToken(
             burnAmount,
             minPriceAllowed,
-            loanDataBytes
+            "" // loanDataBytes
         );
         if (tradeTokenAmountOwed != 0) {
             address _wethContract = wethContract;
@@ -417,18 +418,19 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         address burnTokenAddress,
         uint256 burnAmount,
         uint256 minPriceAllowed,
-        bytes memory loanDataBytes)
+        bytes memory /*loanDataBytes*/)
         public
         payable
         nonReentrant
         fixedSaneRate
         returns (uint256)
     {
+        require(msg.sender == tx.origin, "no contract calls");
         require(!burningPaused, "paused");
         (uint256 tradeTokenAmountOwed, uint256 currentPrice) = _burnToken(
             burnAmount,
             minPriceAllowed,
-            loanDataBytes
+            "" // loanDataBytes
         );
         if (tradeTokenAmountOwed != 0) {
             if (burnTokenAddress != tradeTokenAddress) {
@@ -465,6 +467,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
     function donateAsset(
         address tokenAddress)
         external
+        onlyOwner
         nonReentrant
         returns (bool)
     {
@@ -500,6 +503,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         address _to,
         uint256 _value)
         public
+        onlyOwner
         returns (bool)
     {
         super.transferFrom(
@@ -528,6 +532,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         address _to,
         uint256 _value)
         public
+        onlyOwner
         returns (bool)
     {
         super.transfer(
@@ -551,33 +556,31 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         return true;
     }
 
-    // depositTokenAddress is swapped to tradeTokenAddress (collateral token) if needed in the protocol
-    // this is callable by anyone that wants to top up the collateral
     function depositCollateralToLoan(
-        address depositTokenAddress,
         uint256 depositAmount)
         external
         nonReentrant
     {
-        require(ERC20(depositTokenAddress).transferFrom(
+        require(msg.sender == tx.origin, "no contract calls");
+        require(ERC20(tradeTokenAddress).transferFrom(
             msg.sender,
             address(this),
             depositAmount
         ), "transfer of token failed");
 
-        uint256 tempAllowance = ERC20(depositTokenAddress).allowance(address(this), bZxVault);
+        uint256 tempAllowance = ERC20(tradeTokenAddress).allowance(address(this), bZxVault);
         if (tempAllowance < depositAmount) {
             if (tempAllowance != 0) {
                 // reset approval to 0
-                require(ERC20(depositTokenAddress).approve(bZxVault, 0), "token approval reset failed");
+                require(ERC20(tradeTokenAddress).approve(bZxVault, 0), "token approval reset failed");
             }
 
-            require(ERC20(depositTokenAddress).approve(bZxVault, MAX_UINT), "token approval failed");
+            require(ERC20(tradeTokenAddress).approve(bZxVault, MAX_UINT), "token approval failed");
         }
 
         require(IBZx(bZxContract).depositCollateral(
             loanOrderHash,
-            depositTokenAddress,
+            tradeTokenAddress,
             depositAmount
         ), "deposit failed");
     }
@@ -796,33 +799,6 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
 
     /* Internal functions */
 
-    function _checkTradeSize(
-        address tokenAddress,
-        uint256 amount)
-        internal
-        pure
-    {
-        uint256 maxAmount;
-        if (tokenAddress == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) { // WETH
-            maxAmount = 250 ether; // 270
-        } else if (tokenAddress == 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) { // WBTC
-            maxAmount = 5 * 10**8; // 10,000
-        } else if (tokenAddress == 0x514910771AF9Ca656af840dff83E8264EcF986CA) { // LINK
-            maxAmount = 12000 ether; // 4.42
-        } else if (tokenAddress == 0xE41d2489571d322189246DaFA5ebDe1F4699F498) { // ZRX
-            maxAmount = 150000 ether; // 0.34
-        } else if (tokenAddress == 0xdd974D5C2e2928deA5F71b9825b8b646686BD200) { // KNC
-            maxAmount = 110000 ether; // 0.44
-        } else if (tokenAddress == 0x6B175474E89094C44Da98b954EedeAC495271d0F) { // DAI
-            maxAmount = 75000 ether; // 1
-        } else if (tokenAddress == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) { // USDC
-            maxAmount = 75000 * 10**6; // 1
-        } else if (tokenAddress == 0x1985365e9f78359a9B6AD760e32412f4a445E862) { // REP
-            maxAmount = 3000 ether; // 15.84
-        }
-        require(amount <= maxAmount, "trade too large");
-    }
-
     // returns the amount of token minted
     function _mintWithToken(
         address receiver,
@@ -941,8 +917,6 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
             .mul(currentPrice);
         tradeTokenAmountOwed = tradeTokenAmountOwed
             .div(tradeTokenAdjustment);
-
-        _checkTradeSize(tradeTokenAddress, tradeTokenAmountOwed);
 
         uint256 tradeTokenAmountAvailableInContract = ERC20(tradeTokenAddress).balanceOf(address(this));
 
