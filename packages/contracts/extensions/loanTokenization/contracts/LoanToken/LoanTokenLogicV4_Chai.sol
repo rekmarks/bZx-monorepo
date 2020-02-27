@@ -139,7 +139,7 @@ contract LoanTokenLogicV4_Chai is AdvancedToken, OracleNotifierInterface {
 
     uint256 constant RAY = 10 ** 27;
 
-    address internal constant arbitraryCaller = 0x000F400e6818158D541C3EBE45FE3AA0d47372FF;
+    //address internal constant arbitraryCaller = 0x000F400e6818158D541C3EBE45FE3AA0d47372FF;
 
     // Mainnet
     iChai public constant chai = iChai(0x06AF07097C9Eeb7fD685c692751D5C66dB49c215);
@@ -220,7 +220,7 @@ contract LoanTokenLogicV4_Chai is AdvancedToken, OracleNotifierInterface {
         );
     }
 
-    function flashBorrowToken(
+    /*function flashBorrowToken(
         uint256 borrowAmount,
         address borrower,
         address target,
@@ -284,7 +284,7 @@ contract LoanTokenLogicV4_Chai is AdvancedToken, OracleNotifierInterface {
         _dsrDeposit();
 
         return returnData;
-    }
+    }*/
 
     function borrowTokenFromDeposit(
         uint256 borrowAmount,
@@ -296,6 +296,7 @@ contract LoanTokenLogicV4_Chai is AdvancedToken, OracleNotifierInterface {
         address collateralTokenAddress, // address(0) means ETH and ETH must be sent with the call
         bytes memory /*loanDataBytes*/) // arbitrary order data
         public
+        onlyOwner
         payable
         returns (bytes32 loanOrderHash)
     {
@@ -371,77 +372,12 @@ contract LoanTokenLogicV4_Chai is AdvancedToken, OracleNotifierInterface {
         _dsrDeposit();
     }
 
-    // Called to borrow token for withdrawal or trade
-    // borrowAmount: loan amount to borrow
-    // leverageAmount: signals the amount of initial margin we will collect
-    //   Please reference the docs for supported values.
-    //   Example: 2000000000000000000 -> 150% initial margin
-    //            2000000000000000028 -> 150% initial margin, 28-day fixed-term
-    // interestInitialAmount: This value will indicate the initial duration of the loan
-    //   This is ignored if the loan order has a fixed-term
-    // loanTokenSent: loan token sent (interestAmount + extra)
-    // collateralTokenSent: collateral token sent
-    // tradeTokenSent: trade token sent
-    // borrower: the address the loan will be assigned to (this address can be different than msg.sender)
-    //    Collateral and interest for loan will be withdrawn from msg.sender
-    // receiver: the address that receives the funds (address(0) assumes borrower address)
-    // collateralTokenAddress: The token to collateralize the loan in
-    // tradeTokenAddress: The borrowed token will be swap for this token to start a leveraged trade
-    //    If the borrower wished to instead withdraw the borrowed token to their wallet, set this to address(0)
-    //    If set to address(0), initial collateral required will equal initial margin percent + 100%
-    // returns loanOrderHash for the base protocol loan
-    /*function borrowTokenAndUse(
-        uint256 borrowAmount,
-        uint256 leverageAmount,
-        uint256 interestInitialAmount,
-        uint256 loanTokenSent,
-        uint256 collateralTokenSent,
-        uint256 tradeTokenSent,
-        address borrower,
-        address receiver,
-        address collateralTokenAddress,
-        address tradeTokenAddress,
-        bytes memory *//*loanDataBytes*//*)
-        public
-        //payable
-        returns (bytes32 loanOrderHash)
-    {
-        address[4] memory sentAddresses;
-        sentAddresses[0] = borrower;
-        sentAddresses[1] = collateralTokenAddress;
-        sentAddresses[2] = tradeTokenAddress;
-        sentAddresses[3] = receiver;
-
-        uint256[7] memory sentAmounts;
-        //sentAmounts[0] = 0;  // interestRate (found later)
-        sentAmounts[1] = borrowAmount;
-        sentAmounts[2] = interestInitialAmount;
-        sentAmounts[3] = loanTokenSent;
-        sentAmounts[4] = collateralTokenSent;
-        sentAmounts[5] = tradeTokenSent;
-        sentAmounts[6] = sentAmounts[1];
-
-        require(sentAddresses[1] != address(0) &&
-            (sentAddresses[2] == address(0) ||
-                sentAddresses[2] != address(_getDai())),
-            "9"
-        );
-
-        loanOrderHash = _borrowTokenAndUse(
-            uint256(keccak256(abi.encodePacked(leverageAmount,sentAddresses[1]))),
-            sentAddresses,
-            sentAmounts,
-            false, // amountIsADeposit
-            ""      // loanDataBytes
-        );
-    }*/
-
     // Called by pTokens to borrow and immediately get into a positions
     // Other traders can call this, but it's recommended to instead use borrowTokenAndUse(...) instead
     // assumption: depositAmount is collateral + interest deposit and will be denominated in deposit token
     // assumption: loan token and interest token are the same
     // returns loanOrderHash for the base protocol loan
-    function marginTradeFromDeposit(
+    /*function marginTradeFromDeposit(
         uint256 depositAmount,
         uint256 leverageAmount,
         uint256 loanTokenSent,
@@ -453,6 +389,7 @@ contract LoanTokenLogicV4_Chai is AdvancedToken, OracleNotifierInterface {
         address tradeTokenAddress,
         bytes memory loanDataBytes)
         public
+        onlyOwner
         payable
         returns (bytes32 loanOrderHash)
     {
@@ -495,7 +432,7 @@ contract LoanTokenLogicV4_Chai is AdvancedToken, OracleNotifierInterface {
             true,                       // amountIsADeposit
             loanDataBytes
         );
-    }
+    }*/
 
     function transfer(
         address _to,
