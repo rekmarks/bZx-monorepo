@@ -101,7 +101,7 @@ contract ILoanToken {
         view
         returns (uint256);
 
-    function marginTradeFromDeposit(
+    /*function marginTradeFromDeposit(
         uint256 depositAmount,
         uint256 leverageAmount,
         uint256 loanTokenSent,
@@ -114,7 +114,7 @@ contract ILoanToken {
         bytes calldata loanDataBytes)
         external
         payable
-        returns (bytes32 loanOrderHash);
+        returns (bytes32 loanOrderHash);*/
 }
 
 interface IWethHelper {
@@ -156,7 +156,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
 
     /* Public functions */
 
-    function mintWithEther(
+    /*function mintWithEther(
         address receiver,
         uint256 maxPriceAllowed)
         public
@@ -168,9 +168,9 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
             maxPriceAllowed,
             ""
         );
-    }
+    }*/
 
-    function mintWithToken(
+    /*function mintWithToken(
         address receiver,
         address depositTokenAddress,
         uint256 depositAmount,
@@ -185,7 +185,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
             maxPriceAllowed,
             ""
         );
-    }
+    }*/
 
     function burnToToken(
         address receiver,
@@ -221,10 +221,10 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
 
     // returns the amount of token minted
     // maxPriceAllowed of 0 will be ignored
-    function mintWithEther(
+    /*function mintWithEther(
         address receiver,
         uint256 maxPriceAllowed,
-        bytes memory /*loanDataBytes*/)
+        bytes memory loanDataBytes)
         public
         payable
         onlyOwner
@@ -273,11 +273,11 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
             toCollateralPrecision,
             "" // loanDataBytes
         );
-    }
+    }*/
 
     // returns the amount of token minted
     // maxPriceAllowed of 0 is ignored
-    function mintWithToken(
+    /*function mintWithToken(
         address receiver,
         address depositTokenAddress,
         uint256 depositAmount,
@@ -356,7 +356,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         }
 
         return mintAmount;
-    }
+    }*/
 
     function burnToEther(
         address receiver,
@@ -585,7 +585,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         ), "deposit failed");
     }
 
-    function triggerPosition(
+    /*function triggerPosition(
         address depositTokenAddress,
         uint256 depositAmount,
         uint256 rebalanceAmount,
@@ -624,7 +624,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
                 require(success, "eth refund failed");
             }
         }
-    }
+    }*/
 
 
     /* Public View functions */
@@ -800,7 +800,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
     /* Internal functions */
 
     // returns the amount of token minted
-    function _mintWithToken(
+    /*function _mintWithToken(
         address receiver,
         address depositTokenAddress,
         uint256 depositAmount,
@@ -877,7 +877,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         checkpointPrices_[receiver] = denormalize(currentPrice);
 
         return mintAmount;
-    }
+    }*/
 
     function _burnToken(
         uint256 burnAmount,
@@ -1095,7 +1095,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
         }
     }
 
-    function _triggerPosition(
+    /*function _triggerPosition(
         address depositTokenAddress,
         uint256 depositAmount,
         bytes memory loanDataBytes)
@@ -1145,7 +1145,7 @@ contract PositionTokenLogicV2 is SplittableTokenV2 {
                 loanDataBytes           // loanDataBytes
             );
         }
-    }
+    }*/
 
 
     /* Internal View functions */

@@ -84,28 +84,6 @@ interface IBZxOracle {
         external;
 }
 
-interface ILoanToken {
-    function getMaxEscrowAmount(
-        uint256 leverageAmount)
-        external
-        view
-        returns (uint256);
-
-    function marginTradeFromDeposit(
-        uint256 depositAmount,
-        uint256 leverageAmount,
-        uint256 loanTokenSent,
-        uint256 collateralTokenSent,
-        uint256 tradeTokenSent,
-        address trader,
-        address depositTokenAddress,
-        address collateralTokenAddress,
-        address tradeTokenAddress,
-        bytes calldata loanDataBytes)
-        external
-        returns (bytes32 loanOrderHash);
-}
-
 interface IWethHelper {
     function claimEther(
         address receiver,
@@ -338,26 +316,6 @@ contract PositionTokenLogic_WBTCShort is SplittableToken {
         ), "deposit failed");
     }
 
-    function triggerPosition(
-        address depositTokenAddress,
-        uint256 depositAmount,
-        uint256 rebalanceAmount)
-        public
-        onlyOwner
-    {
-        if (depositTokenAddress == address(0)) {
-            depositTokenAddress = loanTokenAddress;
-        }
-
-        if (rebalanceAmount != 0 && msg.sender == owner) {
-            IBZx(bZxContract).withdrawCollateral(
-                loanOrderHash,
-                rebalanceAmount
-            );
-        }
-
-        _triggerPosition(depositTokenAddress, depositAmount);
-    }
 
     /* Public View functions */
 
@@ -421,32 +379,6 @@ contract PositionTokenLogic_WBTCShort is SplittableToken {
             return 0;
 
         return SafeMath.div(10**38, currentMarginAmount);
-    }
-
-    function marketLiquidityForLoan()
-        public
-        view
-        returns (uint256)
-    {
-        return ILoanToken(loanTokenLender).getMaxEscrowAmount(leverageAmount);
-    }
-
-    function marketLiquidityForAsset()
-        public
-        view
-        returns (uint256)
-    {
-        return ILoanToken(loanTokenLender).getMaxEscrowAmount(leverageAmount);
-    }
-
-    function marketLiquidityForToken()
-        public
-        view
-        returns (uint256)
-    {
-        return ILoanToken(loanTokenLender).getMaxEscrowAmount(leverageAmount)
-            .mul(10**28) // 10**18 * 10**(18-8) - WBTC adjust
-            .div(tokenPrice());
     }
 
     // returns the user's balance of underlying token
@@ -631,73 +563,6 @@ contract PositionTokenLogic_WBTCShort is SplittableToken {
                 sourceTokenAmountUsed := mload(add(data, 64))
             }
         }
-    }
-
-    function _triggerPosition(
-        address depositTokenAddress,
-        uint256 depositAmount)
-        internal
-        returns (bool)
-    {
-        // swap gas refunds left from liquidations
-        uint256 ethBalance = address(this).balance;
-        if (ethBalance != 0) {
-            WETHInterface(wethContract).deposit.value(ethBalance)();
-            if (tradeTokenAddress != wethContract && loanTokenAddress != wethContract) {
-                _tradeUserAsset(
-                    wethContract,       // sourceTokenAddress
-                    loanTokenAddress,   // destTokenAddress
-                    address(this),      // receiver
-                    ethBalance,         // sourceTokenAmount
-                    false               // throwOnError
-                );
-            }
-        }
-
-
-        uint256 tradeTokenBalance = ERC20(tradeTokenAddress).balanceOf(address(this));
-        uint256 loanTokenBalance = ERC20(loanTokenAddress).balanceOf(address(this));
-
-        if (loanTokenBalance != 0 || tradeTokenBalance != 0) {
-            uint256 tradeTokenDeposit;
-            uint256 loanTokenDeposit;
-
-            if (depositTokenAddress == tradeTokenAddress) {
-                if (depositAmount == 0 || depositAmount > tradeTokenBalance) {
-                    tradeTokenDeposit = tradeTokenBalance;
-                    loanTokenDeposit = loanTokenBalance;
-                    depositAmount = tradeTokenBalance;
-                } else {
-                    tradeTokenDeposit = depositAmount;
-                }
-            } else if (depositTokenAddress == loanTokenAddress) {
-                if (depositAmount == 0 || depositAmount > loanTokenBalance) {
-                    loanTokenDeposit = loanTokenBalance;
-                    tradeTokenDeposit = tradeTokenBalance;
-                    depositAmount = loanTokenBalance;
-                } else {
-                    loanTokenDeposit = depositAmount;
-                }
-            } else {
-                revert("invalid deposit");
-            }
-
-            ILoanToken(loanTokenLender).marginTradeFromDeposit(
-                depositAmount,          // depositAmount
-                leverageAmount,         // leverageAmount
-                0,                      // loanTokenSent
-                loanTokenDeposit,       // collateralTokenSent
-                tradeTokenDeposit,      // tradeTokenSent
-                address(this),          // trader
-                depositTokenAddress,    // depositTokenAddress
-                loanTokenAddress,       // collateralTokenAddress
-                tradeTokenAddress,      // tradeTokenAddress
-                ""                      // loanDataBytes
-            );
-            return true;
-        }
-
-        return false;
     }
 
 
