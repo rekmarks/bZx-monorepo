@@ -519,6 +519,8 @@ contract LoanHealth_MiscFunctions4 is BZxStorage, BZxProxiable, OrderClosingFunc
 
         uint256 maxDuration = loanOrder.maxDurationUnixTimestampSec;
 
+        /*
+        ** Code block disabled until loan pools are healthy again **
         uint256 owedPerDay;
         if (maxDuration != 0) {
             // fixed-term loan, so need to query iToken for latest variable rate
@@ -556,6 +558,11 @@ contract LoanHealth_MiscFunctions4 is BZxStorage, BZxProxiable, OrderClosingFunc
 
             maxDuration = 2628000; // approx. 1 month
         }
+        */
+        /// Until code block above is re-enabled use this for both margin and Torque loans ///
+        uint256 owedPerDay = traderInterest.interestOwedPerDay;
+        maxDuration = 2419200; // 28 days
+        //////////////////////
 
         if (backInterestTime >= maxDuration) {
             maxDuration = backInterestTime
