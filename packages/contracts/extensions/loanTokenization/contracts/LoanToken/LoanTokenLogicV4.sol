@@ -858,7 +858,7 @@ contract LoanTokenLogicV4 is AdvancedToken, OracleNotifierInterface {
             .div(31536000 * 10**20); // 365 * 86400 * 10**20
     }
 
-    function _borrowTokenAndUse(
+    /*function _borrowTokenAndUse(
         uint256 leverageAmount,
         address[4] memory sentAddresses,
         uint256[7] memory sentAmounts,
@@ -908,7 +908,7 @@ contract LoanTokenLogicV4 is AdvancedToken, OracleNotifierInterface {
             loanDataBytes
         );
         require(borrowAmount == sentAmounts[1], "23");
-    }
+    }*/
 
     // returns borrowAmount
     function _borrowTokenAndUseFinal(
