@@ -54,6 +54,8 @@ contract iTokens_loanManagementFunctions is BZxStorage, BZxProxiable, OrderClosi
             address collateralTokenAddress
         )
     {
+        require(msg.sender == tx.origin, "no contract calls");
+
         IWethHelper wethHelper = IWethHelper(0x3b5bDCCDFA2a0a1911984F203C19628EeB6036e0);
 
         // only callable by borrower or by iTokens and supporting contracts
