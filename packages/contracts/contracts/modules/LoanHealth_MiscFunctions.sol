@@ -47,14 +47,15 @@ contract LoanHealth_MiscFunctions is BZxStorage, BZxProxiable, OrderClosingFunct
         tracksGas
         returns (bool)
     {
-        (uint256 closeAmount,) = _closeLoan(
+        /*(uint256 closeAmount,) = _closeLoan(
             loanOrderHash,
             msg.sender, // borrower
             msg.sender, // receiver
             gasUsed, // initial used gas, collected in modifier
             "" // loanDataBytes
         );
-        return closeAmount != 0;
+        return closeAmount != 0;*/
+        return false;
     }
 
     /// @dev Called to close a loan in full for someone else
@@ -69,14 +70,15 @@ contract LoanHealth_MiscFunctions is BZxStorage, BZxProxiable, OrderClosingFunct
         tracksGas
         returns (bool)
     {
-        (uint256 closeAmount,) = _closeLoan(
+        /*(uint256 closeAmount,) = _closeLoan(
             loanOrderHash,
             borrower, // borrower
             borrower, // receiver
             gasUsed, // initial used gas, collected in modifier
             "" // loanDataBytes
         );
-        return closeAmount != 0;
+        return closeAmount != 0;*/
+        return false;
     }
 
     /// @dev Called by an admin to force close a loan early and return assets to the lender and trader as is.
