@@ -14,6 +14,8 @@ import "../shared/OrderClosingFunctions.sol";
 import "../BZxVault.sol";
 import "../oracle/OracleInterface.sol";
 
+import "../modifiers/Whitelistable.sol";
+
 
 interface ILoanToken {
     function borrowInterestRate()
@@ -32,7 +34,7 @@ interface ILoanToken {
         returns (uint256);
 }
 
-contract LoanHealth_MiscFunctions4 is BZxStorage, BZxProxiable, OrderClosingFunctions {
+contract LoanHealth_MiscFunctions4 is BZxStorage, BZxProxiable, OrderClosingFunctions, Whitelistable {
     using SafeMath for uint256;
 
     constructor() public {}
@@ -50,6 +52,7 @@ contract LoanHealth_MiscFunctions4 is BZxStorage, BZxProxiable, OrderClosingFunc
     {
         targets[bytes4(keccak256("liquidatePosition(bytes32,address,uint256)"))] = _target;
         targets[bytes4(keccak256("liquidateWithCollateral(bytes32,address,uint256,address,uint256)"))] = _target;
+        targets[bytes4(keccak256("setCallerWhitelist(address,bool)"))] = _target;
         targets[bytes4(keccak256("getCloseAmount(bytes32,address)"))] = _target;
     }
 
@@ -65,6 +68,7 @@ contract LoanHealth_MiscFunctions4 is BZxStorage, BZxProxiable, OrderClosingFunc
         address trader,
         uint256 maxCloseAmount)
         external
+        onlyWhitelist
         nonReentrant
         tracksGas
         returns (bool result)
@@ -99,6 +103,7 @@ contract LoanHealth_MiscFunctions4 is BZxStorage, BZxProxiable, OrderClosingFunc
         address depositTokenAddress, // ignored if non-zero and ether is sent with the call
         uint256 depositAmount) // ignored if ether is sent with the call
         external
+        onlyWhitelist
         payable
         nonReentrant
         tracksGas
@@ -138,6 +143,19 @@ contract LoanHealth_MiscFunctions4 is BZxStorage, BZxProxiable, OrderClosingFunc
             loanPosition,
             maxCloseAmount
         );
+    }
+
+    function setCallerWhitelist(
+        address addr,
+        bool isWhitelisted)
+        external
+        onlyOwner
+    {
+        // keccak256("BZX_CallerWhitelist")
+        bytes32 slot = keccak256(abi.encodePacked(addr, uint256(0x5f860f505ab4212ecce783dc8a4f8f352dd1ac760adcede3abfff9062e6bc51f)));
+        assembly {
+            sstore(slot, isWhitelisted)
+        }
     }
 
     function getCloseAmount(
