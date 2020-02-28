@@ -24,11 +24,13 @@ contract OrderTaking_takeLoanOrderAsTrader is BZxStorage, BZxProxiable, OrderTak
     }
 
     function initialize(
-        address _target)
+        address /*_target*/)
         public
         onlyOwner
     {
-        targets[bytes4(keccak256("takeLoanOrderAsTrader(address[8],uint256[11],bytes,address,uint256,address,bool,bytes)"))] = _target;
+        //targets[bytes4(keccak256("takeLoanOrderAsTrader(address[8],uint256[11],bytes,address,uint256,address,bool,bytes)"))] = _target;
+
+        targets[bytes4(keccak256("takeLoanOrderAsTrader(address[8],uint256[11],bytes,address,uint256,address,bool,bytes)"))] = address(0);
     }
 
     /// @dev Takes the order as trader

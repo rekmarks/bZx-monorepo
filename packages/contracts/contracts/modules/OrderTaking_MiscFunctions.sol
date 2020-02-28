@@ -24,11 +24,11 @@ contract OrderTaking_MiscFunctions is BZxStorage, BZxProxiable, OrderTakingFunct
     }
 
     function initialize(
-        address _target)
+        address /*_target*/)
         public
         onlyOwner
     {
-        targets[bytes4(keccak256("cancelLoanOrder(address[8],uint256[11],bytes,uint256)"))] = _target;
+        /*targets[bytes4(keccak256("cancelLoanOrder(address[8],uint256[11],bytes,uint256)"))] = _target;
         targets[bytes4(keccak256("cancelLoanOrderWithHash(bytes32,uint256)"))] = _target;
         targets[bytes4(keccak256("pushLoanOrderOnChain(address[8],uint256[11],bytes,bytes)"))] = _target;
         targets[bytes4(keccak256("preSign(address,address[8],uint256[11],bytes,bytes)"))] = _target;
@@ -38,7 +38,19 @@ contract OrderTaking_MiscFunctions is BZxStorage, BZxProxiable, OrderTakingFunct
         targets[bytes4(keccak256("getLoanTokenFillable(bytes32)"))] = _target;
         targets[bytes4(keccak256("getLoanOrderHash(address[8],uint256[11],bytes)"))] = _target;
         targets[bytes4(keccak256("isValidSignature(address,bytes32,bytes)"))] = _target;
-        targets[bytes4(keccak256("getInitialCollateralRequired(address,address,address,uint256,uint256)"))] = _target;
+        targets[bytes4(keccak256("getInitialCollateralRequired(address,address,address,uint256,uint256)"))] = _target;*/
+
+        targets[bytes4(keccak256("cancelLoanOrder(address[8],uint256[11],bytes,uint256)"))] = address(0);
+        targets[bytes4(keccak256("cancelLoanOrderWithHash(bytes32,uint256)"))] = address(0);
+        targets[bytes4(keccak256("pushLoanOrderOnChain(address[8],uint256[11],bytes,bytes)"))] = address(0);
+        targets[bytes4(keccak256("preSign(address,address[8],uint256[11],bytes,bytes)"))] = address(0);
+        targets[bytes4(keccak256("preSignWithHash(address,bytes32,bytes)"))] = address(0);
+        targets[bytes4(keccak256("toggleDelegateApproved(address,bool)"))] = address(0);
+        targets[bytes4(keccak256("toggleProtocolDelegateApproved(address,bool)"))] = address(0);
+        targets[bytes4(keccak256("getLoanTokenFillable(bytes32)"))] = address(0);
+        targets[bytes4(keccak256("getLoanOrderHash(address[8],uint256[11],bytes)"))] = address(0);
+        targets[bytes4(keccak256("isValidSignature(address,bytes32,bytes)"))] = address(0);
+        targets[bytes4(keccak256("getInitialCollateralRequired(address,address,address,uint256,uint256)"))] = address(0);
     }
 
     /// @dev Cancels remaining (untaken) loan

@@ -24,11 +24,13 @@ contract OrderTaking_takeLoanOrderOnChainAsLender is BZxStorage, BZxProxiable, O
     }
 
     function initialize(
-        address _target)
+        address /*_target*/)
         public
         onlyOwner
     {
-        targets[bytes4(keccak256("takeLoanOrderOnChainAsLender(bytes32)"))] = _target;
+        //targets[bytes4(keccak256("takeLoanOrderOnChainAsLender(bytes32)"))] = _target;
+
+        targets[bytes4(keccak256("takeLoanOrderOnChainAsLender(bytes32)"))] = address(0);
     }
 
     /// @dev Takes the order as lender that's already pushed on chain

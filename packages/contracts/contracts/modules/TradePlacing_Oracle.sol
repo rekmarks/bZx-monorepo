@@ -28,11 +28,13 @@ contract TradePlacing_Oracle is BZxStorage, BZxProxiable, MiscFunctions {
     }
 
     function initialize(
-        address _target)
+        address /*_target*/)
         public
         onlyOwner
     {
-        targets[bytes4(keccak256("tradePositionWithOracle(bytes32,address)"))] = _target;
+        //targets[bytes4(keccak256("tradePositionWithOracle(bytes32,address)"))] = _target;
+
+        targets[bytes4(keccak256("tradePositionWithOracle(bytes32,address)"))] = address(0);
     }
 
     /// @dev Executes a market order trade using the oracle contract specified in the loan referenced by loanOrderHash
