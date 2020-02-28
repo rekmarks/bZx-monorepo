@@ -54,7 +54,6 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
     }
 
     /// @dev Allows the trader to increase the collateral for a loan.
-    /// @dev If depositTokenAddress is not the correct token, it will be traded to the correct token using the oracle.
     /// @param loanOrderHash A unique hash representing the loan order
     /// @param depositTokenAddress The address of the collateral token used.
     /// @param depositAmount The amount of additional collateral token to deposit.
@@ -78,7 +77,6 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
         );
     }
 
-    /// @dev If depositTokenAddress is not the correct token, it will be traded to the correct token using the oracle.
     /// @param loanOrderHash A unique hash representing the loan order
     /// @param borrower The borrower whose loan to deposit collateral to (for margin trades, this has to equal the sender)
     /// @param payer The address sending the funds
@@ -290,7 +288,7 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
         tracksGas
         returns (uint256 collateralTokenAmountFilled)
     {
-        LoanOrder memory loanOrder = orders[loanOrderHash];
+        /*LoanOrder memory loanOrder = orders[loanOrderHash];
         if (loanOrder.loanTokenAddress == address(0)) {
             revert("changeCollateral: loanOrder.loanTokenAddress == address(0)");
         }
@@ -365,7 +363,8 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
             revert("changeCollateral: OracleInterface.didChangeCollateral failed");
         }
 
-        return collateralTokenAmountFilled;
+        return collateralTokenAmountFilled;*/
+        return 0;
     }
 
     /// @dev Allows the trader to return the position/loan token to increase their escrowed balance
@@ -385,13 +384,14 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
         tracksGas
         returns (bool)
     {
-        return _depositPosition(
+        /*return _depositPosition(
             loanOrderHash,
             msg.sender, // borrower
             depositTokenAddress,
             depositAmount,
             gasUsed
-        );
+        );*/
+        return false;
     }
 
     /// @dev Allows the trader to return the position/loan token to increase their escrowed balance
@@ -413,13 +413,14 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
         tracksGas
         returns (bool)
     {
-        return _depositPosition(
+        /*return _depositPosition(
             loanOrderHash,
             borrower,
             depositTokenAddress,
             depositAmount,
             gasUsed
-        );
+        );*/
+        return false;
     }
 
     /// @dev Allows the trader to withdraw any amount in excess of their loan principal
@@ -435,7 +436,7 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
         tracksGas
         returns (uint256 amountWithdrawn)
     {
-        LoanOrder memory loanOrder = orders[loanOrderHash];
+        /*LoanOrder memory loanOrder = orders[loanOrderHash];
         LoanPosition storage loanPosition = loanPositions[loanPositionsIds[loanOrderHash][msg.sender]];
 
         bool isPositive;
@@ -490,7 +491,8 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
             loanPosition.positionId
         );
 
-        return amountWithdrawn;
+        return amountWithdrawn;*/
+        return 0;
     }
 
     /*
@@ -737,10 +739,13 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
         // for now we allow a collateral deposit prior to loan liquidation
         // require(block.timestamp < loanPosition.loanEndUnixTimestampSec);
 
-        require(msg.value == 0 || (depositTokenAddress == loanPosition.collateralTokenAddressFilled && loanPosition.collateralTokenAddressFilled == wethContract), "wrong asset sent");
+        require(depositTokenAddress == loanPosition.collateralTokenAddressFilled &&
+            (msg.value == 0 || loanPosition.collateralTokenAddressFilled == wethContract),
+            "wrong asset sent"
+        );
 
         uint256 collateralTokenAmountReceived;
-        if (depositTokenAddress != loanPosition.collateralTokenAddressFilled) {
+        /*if (depositTokenAddress != loanPosition.collateralTokenAddressFilled) {
             // send deposit token directly to the oracle to trade it
             if (!BZxVault(vaultContract).transferTokenFrom(
                 depositTokenAddress,
@@ -771,7 +776,7 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
             }
 
             loanPosition.collateralTokenAmountFilled = loanPosition.collateralTokenAmountFilled.add(collateralTokenAmountReceived);
-        } else {
+        } else {*/
             if (msg.value != 0) {
                 require(msg.value >= depositAmount, "insufficient ether");
 
@@ -799,7 +804,7 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
 
             loanPosition.collateralTokenAmountFilled = loanPosition.collateralTokenAmountFilled.add(depositAmount);
             collateralTokenAmountReceived = depositAmount;
-        }
+        //}
 
         /*if (!OracleInterface(oracleAddresses[loanOrder.oracleAddress]).didDepositCollateral(
             loanOrder,
@@ -813,7 +818,7 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
         return true;
     }
 
-    function _depositPosition(
+    /*function _depositPosition(
         bytes32 loanOrderHash,
         address borrower,
         address depositTokenAddress,
@@ -915,7 +920,7 @@ contract LoanMaintenance_MiscFunctions is BZxStorage, BZxProxiable, MiscFunction
         }
 
         return true;
-    }
+    }*/
 
 
     /*
