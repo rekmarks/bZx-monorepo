@@ -1642,7 +1642,7 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
         view
     {
         uint256 actualRate = destTokenAmount
-            .mul(10**18)
+            .mul(_getDecimalPrecision(sourceTokenAddress, destTokenAddress))
             .div(sourceTokenAmount);
 
         (uint256 saneRate,) = _querySaneRate(
