@@ -24,11 +24,14 @@ contract OrderTaking_takeLoanOrderOnChainAsTraderByDelegate is BZxStorage, BZxPr
     }
 
     function initialize(
-        address _target)
+        address /*_target*/)
         public
         onlyOwner
     {
-        targets[bytes4(keccak256("takeLoanOrderOnChainAsTraderByDelegate(address,bytes32,address,uint256,address,bool)"))] = _target;
+        //targets[bytes4(keccak256("takeLoanOrderOnChainAsTraderByDelegate(address,bytes32,address,uint256,address,bool)"))] = _target;
+
+        targets[bytes4(keccak256("takeLoanOrderOnChainAsTraderByDelegate(address,bytes32,address,uint256,address,bool)"))] = address(0);
+
     }
 
     /// @dev Allows a delegate to take an on-chain order on behalf of a trader

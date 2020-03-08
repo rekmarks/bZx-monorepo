@@ -45,7 +45,7 @@ contract LoanHealth_MiscFunctions3 is BZxStorage, BZxProxiable, OrderClosingFunc
         tracksGas
         returns (uint256 actualCloseAmount)
     {
-        if (closeAmount == 0) {
+        /*if (closeAmount == 0) {
             return 0;
         }
 
@@ -75,7 +75,8 @@ contract LoanHealth_MiscFunctions3 is BZxStorage, BZxProxiable, OrderClosingFunc
             loanPosition,
             false, // ensureHealthy
             "" // loanDataBytes
-        );
+        );*/
+        return 0;
     }
 
     /// @dev Called by the trader to close part of their loan early.
@@ -91,7 +92,7 @@ contract LoanHealth_MiscFunctions3 is BZxStorage, BZxProxiable, OrderClosingFunc
         tracksGas
         returns (uint256 actualCloseAmount)
     {
-        if (closeAmount == 0) {
+        /*if (closeAmount == 0) {
             return 0;
         }
 
@@ -121,7 +122,8 @@ contract LoanHealth_MiscFunctions3 is BZxStorage, BZxProxiable, OrderClosingFunc
             loanPosition,
             true, // ensureHealthy
             "" // loanDataBytes
-        );
+        );*/
+        return 0;
     }
 
     function closeLoanPartiallyFromCollateral(

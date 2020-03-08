@@ -56,7 +56,7 @@ contract iTokens_loanManagementFunctions2 is BZxStorage, BZxProxiable, MiscFunct
         address borrower,
         address payer,
         uint256 depositAmount,
-        bool useCollateral)
+        bool /*useCollateral*/)
         external
         payable
         tracksGas
@@ -81,7 +81,8 @@ contract iTokens_loanManagementFunctions2 is BZxStorage, BZxProxiable, MiscFunct
         );
 
         require(loanOrder.maxDurationUnixTimestampSec == 0, "indefinite-term only");
-        require(msg.value == 0 || (!useCollateral && loanOrder.interestTokenAddress == wethContract), "wrong asset sent");
+        //require(msg.value == 0 || (!useCollateral && loanOrder.interestTokenAddress == wethContract), "wrong asset sent");
+        require(msg.value == 0 || loanOrder.interestTokenAddress == wethContract, "wrong asset sent");
 
         address lender = orderLender[loanOrder.loanOrderHash];
         LenderInterest storage oracleInterest = lenderOracleInterest[lender][loanOrder.oracleAddress][loanOrder.interestTokenAddress];
@@ -105,7 +106,7 @@ contract iTokens_loanManagementFunctions2 is BZxStorage, BZxProxiable, MiscFunct
         }
 
         // deposit interest
-        if (useCollateral) {
+        /*if (useCollateral) {
             address oracle = oracleAddresses[loanOrder.oracleAddress];
 
             uint256 sourceTokenAmountUsed;
@@ -137,7 +138,7 @@ contract iTokens_loanManagementFunctions2 is BZxStorage, BZxProxiable, MiscFunct
                 .shouldLiquidate(loanOrder, loanPosition),
                 "unhealthy"
             );
-        } else {
+        } else {*/
             if (msg.value != 0) {
                 require(msg.value >= depositAmount, "insufficient ether");
 
@@ -160,7 +161,7 @@ contract iTokens_loanManagementFunctions2 is BZxStorage, BZxProxiable, MiscFunct
                     depositAmount
                 ), "deposit failed");
             }
-        }
+        //}
 
         secondsExtended = depositAmount
             .mul(86400)
@@ -189,7 +190,7 @@ contract iTokens_loanManagementFunctions2 is BZxStorage, BZxProxiable, MiscFunct
         address borrower,
         uint256 count,
         uint256 loanType)
-        public
+        external
         view
         returns (BasicLoanData[] memory loans)
     {
@@ -271,7 +272,7 @@ contract iTokens_loanManagementFunctions2 is BZxStorage, BZxProxiable, MiscFunct
     function getBasicLoanData(
         bytes32 loanOrderHash,
         address borrower)
-        public
+        external
         view
         returns (BasicLoanData memory loanData)
     {

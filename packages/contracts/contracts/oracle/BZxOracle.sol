@@ -48,6 +48,17 @@ interface KyberNetworkInterface {
     enum ReserveType {NONE, PERMISSIONED, PERMISSIONLESS}
 }
 
+interface AggregatorInterface {
+  function latestAnswer() external view returns (int256);
+  /*function latestTimestamp() external view returns (uint256);
+  function latestRound() external view returns (uint256);
+  function getAnswer(uint256 roundId) external view returns (int256);
+  function getTimestamp(uint256 roundId) external view returns (uint256);
+
+  event AnswerUpdated(int256 indexed current, uint256 indexed roundId, uint256 timestamp);
+  event NewRound(uint256 indexed roundId, address indexed startedBy);*/
+}
+
 contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
     using SafeMath for uint256;
 
@@ -58,6 +69,8 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
 
     // collateral collected to pay margin callers
     uint256 internal collateralReserve_;
+
+    mapping (address => AggregatorInterface) public linkPricesFeeds; // token_address => pricefeed_address
 
     // supported tokens for rate lookups and swaps
     mapping (address => bool) public supportedTokens;
@@ -178,7 +191,7 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
         external
         payable
     {
-        if (msg.value != 0) {
+        if (gasleft() <= 2300) {
             return;
         }
 
@@ -655,11 +668,9 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
         if (collateralTokenAddress == wethAddress) {
             collateralInEthAmount = collateralTokenAmount;
         } else {
-            (uint256 expectedRate,) = _getExpectedRateCall(
+            (uint256 expectedRate,) = _querySaneRate(
                 collateralTokenAddress,
-                wethAddress,
-                0,   // sourceTokenAmount
-                true // saneRate
+                wethAddress
             );
             collateralInEthAmount = collateralTokenAmount
                 .mul(expectedRate)
@@ -828,6 +839,19 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
     /*
     * Owner functions
     */
+
+    function setLinkPriceFeedsBatch(
+        address[] memory tokens,
+        AggregatorInterface[] memory feeds)
+        public
+        onlyOwner
+    {
+        require(tokens.length == feeds.length, "count mismatch");
+
+        for (uint256 i=0; i < tokens.length; i++) {
+            linkPricesFeeds[tokens[i]] = feeds[i];
+        }
+    }
 
     function setSupportedTokensBatch(
         address[] memory tokens,
@@ -1341,8 +1365,7 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
                     (expectedRate, slippageRate) = _getExpectedRateCall(
                         sourceTokenAddress,
                         destTokenAddress,
-                        sourceTokenAmount,
-                        false // saneRate
+                        sourceTokenAmount
                     );
                 }
             } else {
@@ -1359,70 +1382,45 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
         view
         returns (uint256 saneRate, uint256 reversedSaneRate)
     {
-        (uint256 expectedRate,) = _getExpectedRateCall(
-            sourceTokenAddress,
-            destTokenAddress,
-            0,   // sourceTokenAmount
-            true // saneRate
-        );
+        if (sourceTokenAddress != destTokenAddress) {
+            address _wethContract = wethContract;
 
-        (uint256 reversedRate,) = _getExpectedRateCall(
-            destTokenAddress,
-            sourceTokenAddress,
-            0,   // sourceTokenAmount
-            true // saneRate
-        );
-
-        if (expectedRate != 0 && reversedRate != 0) {
-            uint256 reversedRateModified = SafeMath.div(10**36, reversedRate);
-
-            uint256 maxSpread = maxSpreadPercentage;
-            if (maxSpread != 0 && reversedRateModified < expectedRate) {
-                uint256 spreadPercentage = expectedRate
-                    .sub(reversedRateModified);
-                spreadPercentage = spreadPercentage
-                    .mul(10**20);
-                spreadPercentage = spreadPercentage
-                    .div(expectedRate);
-
-                require(
-                    spreadPercentage <= maxSpread,
-                    "bad price"
-                );
+            uint256 sourceRate;
+            if (sourceTokenAddress != _wethContract) {
+                sourceRate = uint256(linkPricesFeeds[sourceTokenAddress].latestAnswer());
+                require(sourceRate != 0 && (sourceRate >> 128) == 0, "bad chainlink price");
+            } else {
+                sourceRate = 10**18;
             }
 
-            saneRate = expectedRate
-                .add(reversedRateModified)
-                .div(2);
+            uint256 destRate;
+            if (destTokenAddress != _wethContract) {
+                destRate = uint256(linkPricesFeeds[destTokenAddress].latestAnswer());
+                require(destRate != 0 && (destRate >> 128) == 0, "bad chainlink price");
+            } else {
+                destRate = 10**18;
+            }
 
-            reversedSaneRate = SafeMath.div(10**36, expectedRate)
-                .add(reversedRate)
-                .div(2);
+            saneRate = sourceRate
+                .mul(10**18)
+                .div(destRate);
+
+            reversedSaneRate = SafeMath.div(10**36, saneRate);
         } else {
-            expectedRate = 0;
-            reversedRate = 0;
+            saneRate = 10**18;
+            reversedSaneRate = 10**18;
         }
     }
 
     function _getExpectedRateCall(
         address sourceTokenAddress,
         address destTokenAddress,
-        uint256 sourceTokenAmount,
-        bool saneRate)
+        uint256 sourceTokenAmount)
         internal
         view
         returns (uint256 expectedRate, uint256 slippageRate)
     {
-        if (saneRate && sourceTokenAmount == 0) {
-            uint256 sourceTokenDecimals = decimals[sourceTokenAddress];
-            if (sourceTokenDecimals == 0)
-                sourceTokenDecimals = EIP20(sourceTokenAddress).decimals();
-
-            sourceTokenAmount = 10**(sourceTokenDecimals >= 2 ?
-                sourceTokenDecimals-2 :
-                sourceTokenDecimals
-            );
-        }
+        require(supportedTokens[sourceTokenAddress] && supportedTokens[destTokenAddress], "invalid tokens");
 
         (bool result, bytes memory data) = kyberContract.staticcall(
             abi.encodeWithSignature(
@@ -1608,6 +1606,14 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
 
                 sourceTokenAmountUsed = sourceBalanceBefore.sub(EIP20(sourceTokenAddress).balanceOf(address(this)));
                 require(sourceTokenAmountUsed <= sourceTokenAmount, "too much sourceToken used");
+
+                // will revert is disagreement found
+                _verifyPriceAgreement(
+                    sourceTokenAddress,
+                    destTokenAddress,
+                    sourceTokenAmountUsed,
+                    destTokenAmountReceived
+                );
             } else {
                 destTokenAmountReceived = MAX_UINT;
             }
@@ -1627,31 +1633,59 @@ contract BZxOracle is EIP20Wrapper, GasRefunder, BZxOwnable {
         }
     }
 
+    function _verifyPriceAgreement(
+        address sourceTokenAddress,
+        address destTokenAddress,
+        uint256 sourceTokenAmount,
+        uint256 destTokenAmount)
+        internal
+        view
+    {
+        uint256 actualRate = destTokenAmount
+            .mul(_getDecimalPrecision(sourceTokenAddress, destTokenAddress))
+            .div(sourceTokenAmount);
+
+        (uint256 saneRate,) = _querySaneRate(
+            sourceTokenAddress,
+            destTokenAddress
+        );
+
+        uint256 spreadValue = actualRate > saneRate ?
+            actualRate - saneRate :
+            saneRate - actualRate;
+
+        if (spreadValue != 0) {
+            spreadValue = spreadValue
+                .mul(10**20)
+                .div(actualRate);
+
+            require(
+                spreadValue <= maxSpreadPercentage,
+                "price disagreement"
+            );
+        }
+    }
+
     function _checkTradeSize(
         address tokenAddress,
         uint256 amount)
         internal
-        pure
+        view
     {
-        uint256 maxAmount;
-        if (tokenAddress == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) { // WETH
-            maxAmount = 1250 ether; // 270
-        } else if (tokenAddress == 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) { // WBTC
-            maxAmount = 25 * 10**8; // 10,000
-        } else if (tokenAddress == 0x514910771AF9Ca656af840dff83E8264EcF986CA) { // LINK
-            maxAmount = 60000 ether; // 4.42
-        } else if (tokenAddress == 0xE41d2489571d322189246DaFA5ebDe1F4699F498) { // ZRX
-            maxAmount = 750000 ether; // 0.34
-        } else if (tokenAddress == 0xdd974D5C2e2928deA5F71b9825b8b646686BD200) { // KNC
-            maxAmount = 550000 ether; // 0.44
-        } else if (tokenAddress == 0x6B175474E89094C44Da98b954EedeAC495271d0F) { // DAI
-            maxAmount = 375000 ether; // 1
-        } else if (tokenAddress == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) { // USDC
-            maxAmount = 375000 * 10**6; // 1
-        } else if (tokenAddress == 0x1985365e9f78359a9B6AD760e32412f4a445E862) { // REP
-            maxAmount = 15000 ether; // 15.84
+        address _wethContract = wethContract;
+        uint256 amountInEth;
+        if (tokenAddress == _wethContract) {
+            amountInEth = amount;
+        } else {
+            (uint toEthRate,) = _querySaneRate(
+                tokenAddress,
+                _wethContract
+            );
+            amountInEth = amount
+                .mul(toEthRate)
+                .div(_getDecimalPrecision(tokenAddress, _wethContract));
         }
-        require(amount <= maxAmount, "trade too large");
+        require(amountInEth <= 1500 ether, "trade too large");
     }
 
     function _transferEther(

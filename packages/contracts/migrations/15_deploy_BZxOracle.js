@@ -19,9 +19,9 @@ const config = require("../protocol-config.js");
 const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const OLD_ORACLE_ADDRESS = "";
-//const OLD_ORACLE_ADDRESS = "0xb017c9936f9271daff23d4c9876651442958a80f"; // mainnet
+//const OLD_ORACLE_ADDRESS = "0xe6590e75337e45ab77b44a14a9610f8062284444"; // mainnet
 //const OLD_ORACLE_ADDRESS = "0x4330762418df3555ddd1d732200b317c9239b941"; // ropsten
-//const OLD_ORACLE_ADDRESS = "0x9b97fd524e25a177371238221cc93695d07b79ec"; // kovan
+//const OLD_ORACLE_ADDRESS = "0x0abDd621A58791d07D0D9E662769C80B3F9D243D"; // kovan
 //const OLD_ORACLE_ADDRESS = "0x76dE3d406FeE6c3316558406B17fF785c978E98C"; // rinkeby
 
 module.exports = (deployer, network, accounts) => {
@@ -129,20 +129,50 @@ module.exports = (deployer, network, accounts) => {
           "0xdac17f958d2ee523a2206206994597c13d831ec7"  // USDT (Tether)
         ],
         [
-          "true", // ETH
-          "true", // WETH
-          "true", // USDC
-          "true", // SAI
-          "true", // WBTC
-          "true", // MKR
-          "true", // KNC
-          "true", // REP
-          "true", // BAT
-          "true", // ZRX
-          "true", // LINK
-          "true", // SUSD
-          "true", // DAI
-          "true"  // USDT (Tether)
+          true, // ETH
+          true, // WETH
+          true, // USDC
+          true, // SAI
+          true, // WBTC
+          true, // MKR
+          true, // KNC
+          true, // REP
+          true, // BAT
+          true, // ZRX
+          true, // LINK
+          true, // SUSD
+          true, // DAI
+          true  // USDT (Tether)
+        ]
+        );
+
+        await oracle.setLinkPriceFeedsBatch([
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", // USDC
+          "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359", // SAI
+          "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", // WBTC
+          "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2", // MKR
+          "0xdd974d5c2e2928dea5f71b9825b8b646686bd200", // KNC
+          "0x1985365e9f78359a9b6ad760e32412f4a445e862", // REP
+          "0x0d8775f648430679a709e98d2b0cb6250d2887ef", // BAT
+          "0xe41d2489571d322189246dafa5ebde1f4699f498", // ZRX
+          "0x514910771af9ca656af840dff83e8264ecf986ca", // LINK
+          "0x57ab1ec28d129707052df4df418d58a2d46d5f51", // SUSD
+          "0x6b175474e89094c44da98b954eedeac495271d0f", // DAI
+          "0xdac17f958d2ee523a2206206994597c13d831ec7"  // USDT (Tether)
+        ],
+        [
+          "0xdE54467873c3BCAA76421061036053e371721708", // USDC
+          "0x037E8F2125bF532F3e228991e051c8A7253B642c", // SAI - (sharing DAI feed)
+          "0x0133Aa47B6197D0BA090Bf2CD96626Eb71fFd13c", // WBTC
+          "0xda3d675d50ff6c555973c4f0424964e1f6a4e7d3", // MKR
+          "0xd0e785973390fF8E77a83961efDb4F271E6B8152", // KNC
+          "0xb8b513d9cf440C1b6f5C7142120d611C94fC220c", // REP
+          "0x9b4e2579895efa2b4765063310Dc4109a7641129", // BAT
+          "0xA0F9D94f060836756FFC84Db4C78d097cA8C23E8", // ZRX
+          "0xeCfA53A8bdA4F0c4dd39c55CC8deF3757aCFDD07", // LINK
+          "0x6d626Ff97f0E89F6f983dE425dc5B24A18DE26Ea", // SUSD
+          "0x037E8F2125bF532F3e228991e051c8A7253B642c", // DAI
+          "0xa874fe207DF445ff19E7482C746C4D3fD0CB9AcE"  // USDT (Tether)
         ]
         );
 
@@ -200,8 +230,8 @@ module.exports = (deployer, network, accounts) => {
           "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359", // SAI
         ],
         [
-          "true", // USDC
-          "true", // SAI
+          true, // USDC
+          true, // SAI
         ]
         );*/
 
@@ -228,12 +258,12 @@ module.exports = (deployer, network, accounts) => {
           "0x71DD45d9579A499B58aa85F50E5E3B241Ca2d10d", // CHAI
         ],
         [
-          "true", // ETH
-          "true", // WETH
-          "true", // SAI
-          "true", // DAI
-          "true", // KNC
-          "true", // CHAI
+          true, // ETH
+          true, // WETH
+          true, // SAI
+          true, // DAI
+          true, // KNC
+          true, // CHAI
         ]
         );
 
@@ -252,10 +282,10 @@ module.exports = (deployer, network, accounts) => {
           "0x6e894660985207feb7cf89faf048998c71e8ee89", // REP (Compound)
         ],
         [
-          "true", // ETH
-          "true", // WETH
-          "true", // SAI
-          "true", // REP
+          true, // ETH
+          true, // WETH
+          true, // SAI
+          true, // REP
         ]
         );
 
@@ -272,10 +302,10 @@ module.exports = (deployer, network, accounts) => {
           "0xf80A32A835F79D7787E8a8ee5721D0fEaFd78108", // DAI (Aave)
         ],
         [
-          "true", // ETH
-          "true", // WETH
-          "true", // DAI (Maker)
-          "true", // DAI (Aave)
+          true, // ETH
+          true, // WETH
+          true, // DAI (Maker)
+          true, // DAI (Aave)
         ]
         );
 
@@ -296,6 +326,7 @@ module.exports = (deployer, network, accounts) => {
 
       var bZxProxy = await BZxProxySettings.at(BZxProxy.address);
       await oracle.transferBZxOwnership(BZxProxy.address);
+
       await bZxProxy.setOracleReference(oracleAddress, oracleAddress);
 
       if (FULCRUM_ORACLE) {
@@ -307,7 +338,7 @@ module.exports = (deployer, network, accounts) => {
       if (FULCRUM_ORACLE3) {
         await bZxProxy.setOracleReference(FULCRUM_ORACLE3, oracleAddress);
       }
-      
+
       /*if (network != "mainnet" && network != "ropsten" && network != "kovan" && network != "rinkeby") {
         await oracle.setDebugMode(true);
       }*/
@@ -333,7 +364,6 @@ module.exports = (deployer, network, accounts) => {
           oracleAddress,
           web3.utils.toWei(10000000, "ether")
         );*/
-
 
         let ethBalance = await web3.eth.getBalance(bZxOracleOld.address);
         if (ethBalance.toString() !== "0") {

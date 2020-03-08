@@ -51,7 +51,8 @@ contract LoanMaintenance_MiscFunctions2 is BZxStorage, BZxProxiable, MiscFunctio
         tracksGas
         returns (bool)
     {
-        if (orderListIndex[loanOrderHash][newOwner].isSet) {
+        return false;
+        /*if (orderListIndex[loanOrderHash][newOwner].isSet) {
             // user can't transfer ownership to another trader or lender already in this order
             revert("BZxLoanMaintenance::changeTraderOwnership: new owner is invalid");
         }
@@ -102,7 +103,7 @@ contract LoanMaintenance_MiscFunctions2 is BZxStorage, BZxProxiable, MiscFunctio
             newOwner
         );
 
-        return true;
+        return true;*/
     }
 
     /// @dev Allows the lender to transfer ownership of the underlying assets in a position to another user.
@@ -117,10 +118,11 @@ contract LoanMaintenance_MiscFunctions2 is BZxStorage, BZxProxiable, MiscFunctio
         tracksGas
         returns (bool)
     {
-        if (orderLender[loanOrderHash] != msg.sender) {
+        return false;
+        /*if (orderLender[loanOrderHash] != msg.sender) {
             revert("BZxLoanMaintenance::changeLenderOwnership: msg.sender is not the lender in this position");
         }
-        
+
         if (orderListIndex[loanOrderHash][newOwner].isSet) {
             // user can't transfer ownership to another trader or lender already in this order
             revert("BZxLoanMaintenance::changeLenderOwnership: new owner is invalid");
@@ -161,6 +163,7 @@ contract LoanMaintenance_MiscFunctions2 is BZxStorage, BZxProxiable, MiscFunctio
         );
 
         return true;
+        */
     }
 
     /// @dev Allows the lender to set optional updates to their on-chain loan order that affects future borrowers
@@ -180,7 +183,8 @@ contract LoanMaintenance_MiscFunctions2 is BZxStorage, BZxProxiable, MiscFunctio
         tracksGas
         returns (bool)
     {
-        if (orderLender[loanOrderHash] != msg.sender || orderAux[loanOrderHash].makerAddress != msg.sender) {
+        return false;
+        /*if (orderLender[loanOrderHash] != msg.sender || orderAux[loanOrderHash].makerAddress != msg.sender) {
             revert("BZxOrderTaking::updateLoanAsLender: sender did not make order as lender");
         }
 
@@ -267,7 +271,7 @@ contract LoanMaintenance_MiscFunctions2 is BZxStorage, BZxProxiable, MiscFunctio
             return true;
         } else {
             return false;
-        }
+        }*/
     }
 
     /// @param loanOrderHash A unique hash representing the loan order
