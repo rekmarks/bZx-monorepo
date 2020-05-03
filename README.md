@@ -1,7 +1,7 @@
 
 ---
 
-[bZx](https://bzx.network) is a protocol for tokenized margin and trading. You can read more about Fulcrum's tokenized loans and tokenized positions [here](https://bzx.network/blog/introducing-fulcrum-tokenized-margin-made-dead-simple) and Torque's borrowing [here](https://bzx.network/blog/introducing-torque-borrowing-made-simple). 
+The [bZx](https://bzx.network) is a protocol for tokenized margin and trading. You can read more about Fulcrum's tokenized loans and tokenized positions [here](https://bzx.network/blog/introducing-fulcrum-tokenized-margin-made-dead-simple) and Torque's borrowing [here](https://bzx.network/blog/introducing-torque-borrowing-made-simple). 
 
 This repository is a monorepo including the bZx protocol smart contracts and numerous developer tools.
 
