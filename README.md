@@ -13,4 +13,3 @@ This repository is a monorepo including the bZx protocol smart contracts and num
 | portal | Frontend OTC portal |
 
 Developer Docs: [https://docs.bzx.network](https://docs.bzx.network)
-(
